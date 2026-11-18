@@ -1,13 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/cubit/current_book_cubit.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/model/reading.dart';
-import 'package:openreads/ui/book_screen/widgets/widgets.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/cubit/current_book_cubit.dart';
+import 'package:readmate/main.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/model/reading.dart';
+import 'package:readmate/ui/book_screen/widgets/widgets.dart';
+import 'package:readmate/ui/common/book_cover.dart';
 
 class BookScreen extends StatelessWidget {
   const BookScreen({
@@ -65,12 +66,7 @@ class BookScreen extends StatelessWidget {
   }
 
   Future<int?> _getQuickRating(BuildContext context) async {
-    return await showDialog<int?>(
-      context: context,
-      builder: (BuildContext context) {
-        return const QuickRatingDialog();
-      },
-    );
+    return null;
   }
 
   void _changeStatusAction(
@@ -81,7 +77,6 @@ class BookScreen extends StatelessWidget {
     final dateNow = DateTime.now();
     final date = DateTime(dateNow.year, dateNow.month, dateNow.day);
 
-    // finishing the book
     if (status == BookStatus.inProgress) {
       final rating = await _getQuickRating(context);
 
@@ -89,21 +84,21 @@ class BookScreen extends StatelessWidget {
         status: BookStatus.read,
         rating: rating,
         readings: book.readings.isNotEmpty
-            ? (book.readings..[0] = book.readings[0].copyWith(finishDate: date))
+            ? (List<Reading>.from(book.readings)..[0] = book.readings[0].copyWith(finishDate: date))
             : [Reading(finishDate: date)],
       );
     } else if (status == BookStatus.forLater) {
       book = book.copyWith(
         status: BookStatus.inProgress,
         readings: book.readings.isNotEmpty
-            ? (book.readings..[0] = book.readings[0].copyWith(startDate: date))
+            ? (List<Reading>.from(book.readings)..[0] = book.readings[0].copyWith(startDate: date))
             : [Reading(startDate: date)],
       );
     } else if (status == BookStatus.unfinished) {
       book = book.copyWith(
         status: BookStatus.inProgress,
         readings: book.readings.isNotEmpty
-            ? (book.readings..[0] = book.readings[0].copyWith(startDate: date))
+            ? (List<Reading>.from(book.readings)..[0] = book.readings[0].copyWith(startDate: date))
             : [Reading(startDate: date)],
       );
     }
@@ -140,9 +135,10 @@ class BookScreen extends StatelessWidget {
                       _buildPagesDetail(state),
                       _buildISBNDetail(state),
                       _buildOLIDDetail(state),
-                      const SizedBox(height: 50),
+                      const SizedBox(height: 20),
+                      _buildHistoryCheckButton(state, context),
+                      const SizedBox(height: 30),
                       _buildDescriptionDetail(state),
-                      _buildMyReviewDetail(state),
                       _buildNotesDetail(state),
                       _buildEditDates(state),
                       const SizedBox(height: 100),
@@ -173,14 +169,7 @@ class BookScreen extends StatelessWidget {
         : const SizedBox();
   }
 
-  Widget _buildMyReviewDetail(Book state) {
-    return (state.myReview != null && state.myReview!.isNotEmpty)
-        ? BookDetailLong(
-            title: LocaleKeys.my_review.tr(),
-            text: state.myReview!,
-          )
-        : const SizedBox();
-  }
+
 
   Widget _buildDescriptionDetail(Book state) {
     return (state.description != null && state.description!.isNotEmpty)
@@ -240,13 +229,18 @@ class BookScreen extends StatelessWidget {
         : const SizedBox();
   }
 
-  SingleChildRenderObjectWidget _buildCoverSpace(
+  Widget _buildCoverSpace(
       Book state, MediaQueryData mediaQuery) {
     return (state.hasCover == true)
-        ? Center(
-            child: CoverView(
-              heroTag: heroTag,
-              book: state,
+        ? Padding(
+            padding: EdgeInsets.only(top: mediaQuery.padding.top + 20),
+            child: Center(
+              child: BookCover(
+                book: state,
+                width: 200,
+                height: 300,
+                fit: BoxFit.contain,
+              ),
             ),
           )
         : SizedBox(
@@ -262,6 +256,24 @@ class BookScreen extends StatelessWidget {
       publicationYear: (state.publicationYear ?? "").toString(),
       tags: state.tags?.split('|||||'),
       bookType: state.bookFormat,
+    );
+  }
+
+  void _markUnfinishedAction(BuildContext context, Book book) {
+    book = book.copyWith(
+      status: BookStatus.unfinished,
+    );
+
+    bookCubit.updateBook(book);
+
+    if (!context.mounted) return;
+    context.read<CurrentBookCubit>().setBook(book);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Marked as Unfinished at page ${book.currentPage > 0 ? book.currentPage : "1"}'),
+        backgroundColor: Colors.orange,
+      ),
     );
   }
 
@@ -288,7 +300,40 @@ class BookScreen extends StatelessWidget {
           state,
         );
       },
-      showRatingAndLike: state.status == BookStatus.read,
+      showUnfinishStatus: (state.status == BookStatus.inProgress),
+      unfinishStatusAction: () {
+        _markUnfinishedAction(context, state);
+      },
+      showRatingAndLike: (state.status == BookStatus.read || state.status == BookStatus.unfinished),
+    );
+  }
+
+  Widget _buildHistoryCheckButton(Book state, BuildContext context) {
+    if (state.id == null) return const SizedBox();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 25),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => BookHistorySheet.show(context, state),
+          icon: const Icon(Icons.history, color: Color(0xff00BFA6)),
+          label: const Text(
+            'History Check & Report',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xff00BFA6),
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            side: const BorderSide(color: Color(0xff00BFA6), width: 1.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

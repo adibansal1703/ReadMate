@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:openreads/core/constants/enums/enums.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
 
 OLEditionResult openLibraryEditionResultFromJson(String str) =>
     OLEditionResult.fromJson(json.decode(str));

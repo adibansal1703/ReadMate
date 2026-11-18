@@ -1,39 +1,29 @@
-import 'dart:io';
-
-import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/bloc/open_library_search_bloc/open_library_search_bloc.dart';
-import 'package:openreads/logic/cubit/default_book_status_cubit.dart';
-import 'package:openreads/logic/cubit/default_book_tags_cubit.dart';
-import 'package:openreads/logic/cubit/edit_book_cubit.dart';
-import 'package:openreads/model/ol_edition_result.dart';
-import 'package:openreads/model/reading.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/model/ol_search_result.dart';
-import 'package:openreads/resources/open_library_service.dart';
-import 'package:openreads/ui/add_book_screen/add_book_screen.dart';
-import 'package:openreads/ui/add_book_screen/widgets/widgets.dart';
-import 'package:openreads/ui/common/keyboard_dismissable.dart';
-import 'package:openreads/ui/search_ol_editions_screen/search_ol_editions_screen.dart';
-import 'package:openreads/ui/search_ol_screen/widgets/widgets.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/core/themes/app_theme.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/bloc/open_library_search_bloc/open_library_search_bloc.dart';
+import 'package:readmate/logic/cubit/edit_book_cubit.dart';
+import 'package:readmate/model/ol_edition_result.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/model/ol_search_result.dart';
+import 'package:readmate/resources/open_library_service.dart';
+import 'package:readmate/ui/add_book_screen/add_book_screen.dart';
+import 'package:readmate/ui/add_book_screen/widgets/widgets.dart';
+import 'package:readmate/ui/common/keyboard_dismissable.dart';
+import 'package:readmate/ui/search_ol_editions_screen/search_ol_editions_screen.dart';
+import 'package:readmate/ui/search_ol_screen/widgets/widgets.dart';
 
 class SearchOLScreen extends StatefulWidget {
   const SearchOLScreen({
     super.key,
-    this.scan = false,
     required this.status,
   });
 
-  final bool scan;
   final BookStatus status;
 
   @override
@@ -47,12 +37,14 @@ class _SearchOLScreenState extends State<SearchOLScreen>
   final _pageSize = 10;
   String? _searchTerm;
   int? numberOfResults;
-  ScanResult? scanResult;
   int searchTimestamp = 0;
 
   bool searchActivated = false;
   bool _searchingISBN = false;
   bool _searchingISBNError = false;
+
+  List<OLSearchResultDoc> _trendingBooks = [];
+  bool _isLoadingTrending = false;
 
   late final _pagingController = PagingController<int, OLSearchResultDoc>(
     fetchPage: (pageKey) => _fetchPage(pageKey),
@@ -70,10 +62,7 @@ class _SearchOLScreenState extends State<SearchOLScreen>
     int? cover,
     List<String>? isbn,
     String? olid,
-  }) {
-    final defaultBookFormat = context.read<DefaultBooksFormatCubit>().state;
-    final defaultTags = context.read<DefaultBookTagsCubit>().state;
-
+  }) async {
     final book = Book(
       title: title,
       subtitle: subtitle,
@@ -84,24 +73,27 @@ class _SearchOLScreenState extends State<SearchOLScreen>
       isbn: (isbn != null && isbn.isNotEmpty) ? isbn[0] : null,
       olid: (olid != null) ? olid.replaceAll('/works/', '') : null,
       publicationYear: firstPublishYear,
-      bookFormat: defaultBookFormat,
-      readings: List<Reading>.empty(growable: true),
-      tags: defaultTags.isNotEmpty ? defaultTags.join('|||||') : null,
+      readings: const [],
       dateAdded: DateTime.now(),
       dateModified: DateTime.now(),
     );
 
     context.read<EditBookCubit>().setBook(book);
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AddBookScreen(
-          fromOpenLibrary: true,
-          coverOpenLibraryID: cover,
-          work: olid,
+    if (book.isbn != null) {
+      final coverBytes = await OpenLibraryService().getCover(book.isbn!);
+      if (mounted) {
+        context.read<EditBookCoverCubit>().setCover(coverBytes);
+      }
+    }
+
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const AddBookScreen(),
         ),
-      ),
-    );
+      );
+    }
   }
 
   void _saveEdition({
@@ -109,13 +101,15 @@ class _SearchOLScreenState extends State<SearchOLScreen>
     required int? cover,
     String? work,
     String? authors,
-  }) {
+  }) async {
     if (!mounted) return;
 
-    final defaultBookFormat = context.read<DefaultBooksFormatCubit>().state;
-    final defaultTags = context.read<DefaultBookTagsCubit>().state;
-
     final addDate = DateTime.now();
+    final isbn = (result.isbn13 != null && result.isbn13!.isNotEmpty)
+          ? result.isbn13![0]
+          : (result.isbn10 != null && result.isbn10!.isNotEmpty)
+              ? result.isbn10![0]
+              : null;
 
     final book = Book(
       title: result.title!,
@@ -124,32 +118,30 @@ class _SearchOLScreenState extends State<SearchOLScreen>
       pages: result.numberOfPages,
       status: widget.status,
       favourite: false,
-      isbn: (result.isbn13 != null && result.isbn13!.isNotEmpty)
-          ? result.isbn13![0]
-          : (result.isbn10 != null && result.isbn10!.isNotEmpty)
-              ? result.isbn10![0]
-              : null,
+      isbn: isbn,
       olid: (result.key != null) ? result.key!.replaceAll('/books/', '') : null,
       publicationYear: int.tryParse(result.publishDate ?? ''),
-      bookFormat: result.physicalFormat ?? defaultBookFormat,
-      readings: List<Reading>.empty(growable: true),
-      tags: defaultTags.isNotEmpty == true ? defaultTags.join('|||||') : null,
+      readings: const [],
       dateAdded: addDate,
       dateModified: addDate,
     );
 
     context.read<EditBookCubit>().setBook(book);
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AddBookScreen(
-          fromOpenLibrary: true,
-          fromOpenLibraryEdition: true,
-          work: work,
-          coverOpenLibraryID: cover,
+    if (isbn != null) {
+      final coverBytes = await OpenLibraryService().getCover(isbn);
+      if (mounted) {
+        context.read<EditBookCoverCubit>().setCover(coverBytes);
+      }
+    }
+
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const AddBookScreen(),
         ),
-      ),
-    );
+      );
+    }
   }
 
   Future<List<OLSearchResultDoc>> _fetchPage(int pageKey) async {
@@ -168,8 +160,6 @@ class _SearchOLScreenState extends State<SearchOLScreen>
         ),
       );
 
-      // Used to cancel the request if a new search is startedpageKey
-      // to avoid showing results from a previous search
       if (searchTimestamp != searchTimestampSaved) return [];
 
       setState(() {
@@ -178,7 +168,6 @@ class _SearchOLScreenState extends State<SearchOLScreen>
 
       return newItems.docs;
     } catch (error) {
-      // TODO: Handle error and show message to user
       return [];
     }
   }
@@ -243,33 +232,6 @@ class _SearchOLScreenState extends State<SearchOLScreen>
     }
   }
 
-  void _startScanner() async {
-    FocusManager.instance.primaryFocus?.unfocus();
-    context.read<OpenLibrarySearchBloc>().add(const OpenLibrarySearchSetISBN());
-
-    var result = await BarcodeScanner.scan(
-      options: ScanOptions(
-        strings: {
-          'cancel': LocaleKeys.cancel.tr(),
-          'flash_on': LocaleKeys.flash_on.tr(),
-          'flash_off': LocaleKeys.flash_off.tr(),
-        },
-      ),
-    );
-
-    if (result.type == ResultType.Barcode) {
-      setState(() {
-        _searchingISBNError = false;
-        searchActivated = true;
-        _searchController.text = result.rawContent;
-      });
-
-      _searchTerm = result.rawContent;
-      // _pagingController.refresh();
-      _searchByISBN(result.rawContent);
-    }
-  }
-
   OLSearchType _getOLSearchTypeEnum(OpenLibrarySearchState state) {
     if (state is OpenLibrarySearchGeneral) {
       return OLSearchType.general;
@@ -302,49 +264,36 @@ class _SearchOLScreenState extends State<SearchOLScreen>
         break;
     }
 
-    // Delay for the state to be updated
     await Future.delayed(const Duration(milliseconds: 100));
 
     _startNewSearch();
   }
 
-  // Used when search results are empty
-  _addBookManually() {
+  _onChooseEditionPressed(OLSearchResultDoc item) async {
     FocusManager.instance.primaryFocus?.unfocus();
 
-    final searchType = _getOLSearchTypeEnum(
-      context.read<OpenLibrarySearchBloc>().state,
-    );
+    List<String> editions = item.editionKey ?? [];
+    
+    if (editions.isEmpty && item.key != null) {
+      final fetchedEditions = await OpenLibraryService().getWorkEditions(item.key!);
+      editions = fetchedEditions;
+    }
 
-    final book = Book(
-      title: searchType == OLSearchType.title ? _searchController.text : '',
-      author: searchType == OLSearchType.author ? _searchController.text : '',
-      status: BookStatus.read,
-      isbn: searchType == OLSearchType.isbn ? _searchController.text : null,
-      readings: List<Reading>.empty(growable: true),
-      tags: 'owned',
-      dateAdded: DateTime.now(),
-      dateModified: DateTime.now(),
-    );
+    if (!mounted) return;
 
-    context.read<EditBookCubit>().setBook(book);
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const AddBookScreen(fromOpenLibrary: true),
-      ),
-    );
-  }
-
-  _onChooseEditionPressed(OLSearchResultDoc item) {
-    FocusManager.instance.primaryFocus?.unfocus();
+    if (editions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No editions found for this book.")),
+      );
+      return;
+    }
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SearchOLEditionsScreen(
           status: widget.status,
-          editions: item.editionKey!,
+          editions: editions,
           title: item.title!,
           subtitle: item.subtitle,
           author: (item.authorName != null && item.authorName!.isNotEmpty)
@@ -362,8 +311,27 @@ class _SearchOLScreenState extends State<SearchOLScreen>
   @override
   void initState() {
     super.initState();
-    if (widget.scan) {
-      _startScanner();
+    _fetchTrending();
+  }
+
+  Future<void> _fetchTrending() async {
+    setState(() {
+      _isLoadingTrending = true;
+    });
+    try {
+      final results = await OpenLibraryService().getTrending();
+      if (mounted) {
+        setState(() {
+          _trendingBooks = results;
+          _isLoadingTrending = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingTrending = false;
+        });
+      }
     }
   }
 
@@ -388,12 +356,6 @@ class _SearchOLScreenState extends State<SearchOLScreen>
             LocaleKeys.add_search.tr(),
             style: const TextStyle(fontSize: 18),
           ),
-          actions: [
-            IconButton(
-              onPressed: _startScanner,
-              icon: const FaIcon(FontAwesomeIcons.solidCamera, size: 18),
-            ),
-          ],
         ),
         body: Column(
           children: [
@@ -409,10 +371,41 @@ class _SearchOLScreenState extends State<SearchOLScreen>
                             ? _buildNoItemsFoundIndicator()
                             : _buildSearchResults(),
                   )
-                : const SizedBox.shrink(),
+                : Expanded(child: _buildTrendingList()),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTrendingList() {
+    if (_isLoadingTrending) {
+      return _buildFirstPageProgressIndicator(context);
+    }
+
+    if (_trendingBooks.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Text(
+            "Trending Books Today",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: _trendingBooks.length,
+            itemBuilder: (context, index) {
+              return _buildResultCard(_trendingBooks[index]);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -439,15 +432,10 @@ class _SearchOLScreenState extends State<SearchOLScreen>
 
   Center _buildFirstPageProgressIndicator(BuildContext context) {
     return Center(
-      child: Platform.isIOS
-          ? CupertinoActivityIndicator(
-              radius: 20,
-              color: Theme.of(context).colorScheme.primary,
-            )
-          : LoadingAnimationWidget.staggeredDotsWave(
-              color: Theme.of(context).colorScheme.primary,
-              size: 42,
-            ),
+      child: LoadingAnimationWidget.staggeredDotsWave(
+        color: Theme.of(context).colorScheme.primary,
+        size: 42,
+      ),
     );
   }
 
@@ -464,7 +452,7 @@ class _SearchOLScreenState extends State<SearchOLScreen>
         pagesMedian: item.medianPages,
         firstPublishYear: item.firstPublishYear,
         onAddBookPressed: () => _saveNoEdition(
-          editions: item.editionKey!,
+          editions: item.editionKey ?? [],
           title: item.title ?? '',
           subtitle: item.subtitle,
           author: (item.authorName != null && item.authorName!.isNotEmpty)
@@ -486,30 +474,17 @@ class _SearchOLScreenState extends State<SearchOLScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(
-              cornerRadius,
-            ),
-            onTap: _addBookManually,
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                children: [
-                  Text(
-                    LocaleKeys.no_search_results.tr(),
-                    style: const TextStyle(
-                      fontSize: 18,
-                    ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              children: [
+                Text(
+                  LocaleKeys.no_search_results.tr(),
+                  style: const TextStyle(
+                    fontSize: 18,
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    LocaleKeys.click_to_add_book_manually.tr(),
-                    style: const TextStyle(
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -521,15 +496,10 @@ class _SearchOLScreenState extends State<SearchOLScreen>
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Platform.isIOS
-            ? CupertinoActivityIndicator(
-                radius: 20,
-                color: Theme.of(context).colorScheme.primary,
-              )
-            : LoadingAnimationWidget.staggeredDotsWave(
-                color: Theme.of(context).colorScheme.primary,
-                size: 42,
-              ),
+        child: LoadingAnimationWidget.staggeredDotsWave(
+          color: Theme.of(context).colorScheme.primary,
+          size: 42,
+        ),
       ),
     );
   }

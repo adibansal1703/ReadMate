@@ -1,12 +1,9 @@
-import 'dart:io';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
+import 'package:readmate/core/themes/app_theme.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
 
 class BookCardOLEdition extends StatelessWidget {
   BookCardOLEdition({
@@ -61,21 +58,16 @@ class BookCardOLEdition extends StatelessWidget {
                           placeholder: (context, url) => Center(
                             child: Container(
                               padding: const EdgeInsets.all(5),
-                              child: Platform.isIOS
-                                  ? CupertinoActivityIndicator(
-                                      radius: 20,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    )
-                                  : LoadingAnimationWidget.threeArchedCircle(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      size: 24,
-                                    ),
+                              child: LoadingAnimationWidget.threeArchedCircle(
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 24,
+                              ),
                             ),
                           ),
-                          errorWidget: (context, url, error) =>
-                              const Icon(Icons.error),
+                          errorWidget: (context, url, error) {
+                            debugPrint("OpenLibrary Edition Image Error: $error \nURL: $url");
+                            return const Icon(Icons.error);
+                          },
                         ),
                       ),
                     )

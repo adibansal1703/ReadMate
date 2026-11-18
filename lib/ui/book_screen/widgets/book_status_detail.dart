@@ -3,13 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/bloc/rating_type_bloc/rating_type_bloc.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/model/reading_time.dart';
-import 'package:openreads/ui/book_screen/widgets/widgets.dart';
+import 'package:readmate/core/themes/app_theme.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/bloc/rating_type_bloc/rating_type_bloc.dart';
+import 'package:readmate/main.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/ui/book_screen/widgets/widgets.dart';
 
 class BookStatusDetail extends StatefulWidget {
   const BookStatusDetail({
@@ -21,6 +20,8 @@ class BookStatusDetail extends StatefulWidget {
     this.showChangeStatus = false,
     this.changeStatusText,
     this.changeStatusAction,
+    this.showUnfinishStatus = false,
+    this.unfinishStatusAction,
     this.showRatingAndLike = false,
   });
 
@@ -31,6 +32,8 @@ class BookStatusDetail extends StatefulWidget {
   final bool showChangeStatus;
   final String? changeStatusText;
   final Function()? changeStatusAction;
+  final bool showUnfinishStatus;
+  final Function()? unfinishStatusAction;
   final bool showRatingAndLike;
 
   @override
@@ -42,10 +45,7 @@ class _BookStatusDetailState extends State<BookStatusDetail> {
     DateTime? startDate,
     DateTime? finishDate,
     required BuildContext context,
-    ReadingTime? readingTime,
   }) {
-    if (readingTime != null) return '($readingTime)';
-
     if (startDate == null || finishDate == null) return '';
 
     final diff = finishDate.difference(startDate).inDays + 1;
@@ -62,10 +62,11 @@ class _BookStatusDetailState extends State<BookStatusDetail> {
           Row(
             children: [
               _buildStatusBox(context),
-              SizedBox(width: (widget.showChangeStatus) ? 20 : 0),
-              (widget.showChangeStatus)
-                  ? _buildChangeStatusButton(context)
-                  : const SizedBox(),
+              const SizedBox(width: 10),
+              if (widget.showUnfinishStatus)
+                _buildUpdateDropdownButton(context)
+              else if (widget.showChangeStatus)
+                _buildChangeStatusButton(context),
             ],
           ),
           const SizedBox(height: 10),
@@ -156,6 +157,104 @@ class _BookStatusDetailState extends State<BookStatusDetail> {
     );
   }
 
+  Widget _buildUnfinishStatusButton(BuildContext context) {
+    return InkWell(
+      onTap: widget.unfinishStatusAction,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.orange.withOpacity(0.2),
+          border: Border.all(color: Colors.orange.withOpacity(0.5)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 8,
+            horizontal: 10,
+          ),
+          child: Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Icon(Icons.not_interested, size: 16, color: Colors.orange),
+                const SizedBox(width: 6),
+                Text(
+                  LocaleKeys.book_status_unfinished.tr(),
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpdateDropdownButton(BuildContext context) {
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        if (value == 'finish') {
+          if (widget.changeStatusAction != null) widget.changeStatusAction!();
+        } else if (value == 'unfinish') {
+          if (widget.unfinishStatusAction != null) widget.unfinishStatusAction!();
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          value: 'finish',
+          child: Row(
+            children: [
+              const Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
+              const SizedBox(width: 8),
+              Text(LocaleKeys.finish_reading.tr()),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'unfinish',
+          child: Row(
+            children: [
+              const Icon(Icons.not_interested, color: Colors.orange, size: 20),
+              const SizedBox(width: 8),
+              Text(LocaleKeys.book_status_unfinished.tr()),
+            ],
+          ),
+        ),
+      ],
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Theme.of(context).colorScheme.secondaryContainer,
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Update',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSecondaryContainer,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.arrow_drop_down,
+              size: 20,
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Column _buildRatingAndLike(BuildContext context) {
     return Column(
       children: [
@@ -186,9 +285,14 @@ class _BookStatusDetailState extends State<BookStatusDetail> {
                 _buildRating(context),
               ],
             ),
-            LikeButton(
-              isLiked: widget.book.favourite,
-              onTap: widget.onLikeTap,
+            IconButton(
+              icon: Icon(
+                widget.book.favourite
+                    ? Icons.favorite
+                    : Icons.favorite_border,
+                color: widget.book.favourite ? Colors.red : null,
+              ),
+              onPressed: widget.onLikeTap,
             ),
           ],
         ),
@@ -209,9 +313,9 @@ class _BookStatusDetailState extends State<BookStatusDetail> {
             itemSize: 34,
             ignoreGestures: true,
             itemPadding: const EdgeInsets.only(right: 3),
-            itemBuilder: (context, _) => FaIcon(
+            itemBuilder: (context, _) => const FaIcon(
               FontAwesomeIcons.solidStar,
-              color: Theme.of(context).colorScheme.primaryContainer,
+              color: Colors.amber,
             ),
             onRatingUpdate: (_) {},
           );
@@ -231,7 +335,7 @@ class _BookStatusDetailState extends State<BookStatusDetail> {
               const SizedBox(width: 8),
               FaIcon(
                 FontAwesomeIcons.solidStar,
-                color: Theme.of(context).colorScheme.primaryContainer,
+                color: Colors.amber,
                 size: 16,
               ),
             ],
@@ -248,19 +352,16 @@ class _BookStatusDetailState extends State<BookStatusDetail> {
       late Widget widget;
       final startDate = reading.startDate;
       final finishDate = reading.finishDate;
-      final readingTime = reading.customReadingTime;
 
       if (startDate != null && finishDate != null) {
         widget = _buildStartAndFinishDate(
           startDate,
           finishDate,
-          readingTime,
           context,
         );
       } else if (startDate == null && finishDate != null) {
         widget = _buildOnlyFinishDate(
           finishDate,
-          readingTime,
           context,
         );
       } else if (startDate != null && finishDate == null) {
@@ -290,14 +391,12 @@ class _BookStatusDetailState extends State<BookStatusDetail> {
   Widget _buildStartAndFinishDate(
     DateTime startDate,
     DateTime finishDate,
-    ReadingTime? readingTime,
     BuildContext context,
   ) {
     final readingTimeText = ' ${_generateReadingTime(
       startDate: startDate,
       finishDate: finishDate,
       context: context,
-      readingTime: readingTime,
     )}';
 
     return RichText(
@@ -323,14 +422,12 @@ class _BookStatusDetailState extends State<BookStatusDetail> {
 
   Widget _buildOnlyFinishDate(
     DateTime finishDate,
-    ReadingTime? readingTime,
     BuildContext context,
   ) {
     final readingTimeText = ' ${_generateReadingTime(
       startDate: null,
       finishDate: null,
       context: context,
-      readingTime: readingTime,
     )}';
 
     return RichText(

@@ -1,5 +1,5 @@
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
 
 class BookListsOrderCubit extends HydratedCubit<List<BookStatus>> {
   BookListsOrderCubit()

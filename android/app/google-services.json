@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1010282993033",
+    "project_id": "readmate-9e2e0",
+    "storage_bucket": "readmate-9e2e0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1010282993033:android:8321e0903bcb32dd82fd58",
+        "android_client_info": {
+          "package_name": "software.mdev.bookstracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRCudKOcuY4nn3y5bIt6a-QloVP1LHhOY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

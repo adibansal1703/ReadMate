@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
 
 part 'rating_type_event.dart';
 part 'rating_type_state.dart';

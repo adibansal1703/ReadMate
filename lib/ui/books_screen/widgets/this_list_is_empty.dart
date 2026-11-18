@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
 
 class ThisListIsEmpty extends StatelessWidget {
   const ThisListIsEmpty({

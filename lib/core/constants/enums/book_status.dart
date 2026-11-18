@@ -16,21 +16,26 @@ extension BookStatusExtension on BookStatus {
         return 2;
       case BookStatus.unfinished:
         return 3;
-      default:
-        return 0;
     }
   }
 }
 
-BookStatus parseBookStatus(int value) {
-  switch (value) {
-    case 0:
+BookStatus parseBookStatus(dynamic value) {
+  final stringVal = value?.toString().toLowerCase();
+  switch (stringVal) {
+    case '0':
+    case 'read':
       return BookStatus.read;
-    case 1:
+    case '1':
+    case 'inprogress':
+    case 'in_progress':
       return BookStatus.inProgress;
-    case 2:
+    case '2':
+    case 'forlater':
+    case 'for_later':
       return BookStatus.forLater;
-    case 3:
+    case '3':
+    case 'unfinished':
       return BookStatus.unfinished;
     default:
       return BookStatus.read;

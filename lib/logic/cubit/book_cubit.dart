@@ -1,50 +1,30 @@
-import 'dart:io';
-
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/constants/constants.dart';
-import 'package:openreads/logic/cubit/current_book_cubit.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/resources/open_library_service.dart';
-import 'package:openreads/resources/repository.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/logic/cubit/current_book_cubit.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/model/reading.dart';
+import 'package:readmate/resources/api_book_repository.dart';
+import 'package:readmate/main.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:blurhash_dart/blurhash_dart.dart' as blurhash_dart;
-import 'package:image/image.dart' as img;
 
-import 'package:openreads/core/constants/enums/enums.dart';
+class BookCubit extends Cubit<List<Book>> {
+  ApiBookRepository? _repository;
+  bool _isInitialSyncComplete = false;
 
-class BookCubit extends Cubit {
-  final Repository repository = Repository();
-
-  final BehaviorSubject<List<Book>> _booksFetcher =
-      BehaviorSubject<List<Book>>();
-  final BehaviorSubject<List<Book>> _finishedBooksFetcher =
-      BehaviorSubject<List<Book>>();
-  final BehaviorSubject<List<Book>> _inProgressBooksFetcher =
-      BehaviorSubject<List<Book>>();
-  final BehaviorSubject<List<Book>> _toReadBooksFetcher =
-      BehaviorSubject<List<Book>>();
-  final BehaviorSubject<List<Book>> _deletedBooksFetcher =
-      BehaviorSubject<List<Book>>();
-  final BehaviorSubject<List<Book>> _unfinishedBooksFetcher =
-      BehaviorSubject<List<Book>>();
-  final BehaviorSubject<List<Book>> _searchBooksFetcher =
-      BehaviorSubject<List<Book>>();
-  final BehaviorSubject<List<int>> _finishedYearsFetcher =
-      BehaviorSubject<List<int>>();
-  final BehaviorSubject<List<String>> _tagsFetcher =
-      BehaviorSubject<List<String>>();
-  final BehaviorSubject<List<String>> _authorsFetcher =
-      BehaviorSubject<List<String>>();
+  final BehaviorSubject<List<Book>> _booksFetcher = BehaviorSubject<List<Book>>();
+  final BehaviorSubject<List<Book>> _finishedBooksFetcher = BehaviorSubject<List<Book>>();
+  final BehaviorSubject<List<Book>> _inProgressBooksFetcher = BehaviorSubject<List<Book>>();
+  final BehaviorSubject<List<Book>> _toReadBooksFetcher = BehaviorSubject<List<Book>>();
+  final BehaviorSubject<List<Book>> _deletedBooksFetcher = BehaviorSubject<List<Book>>();
+  final BehaviorSubject<List<Book>> _unfinishedBooksFetcher = BehaviorSubject<List<Book>>();
+  final BehaviorSubject<List<Book>> _searchBooksFetcher = BehaviorSubject<List<Book>>();
+  final BehaviorSubject<List<int>> _finishedYearsFetcher = BehaviorSubject<List<int>>();
+  final BehaviorSubject<List<String>> _tagsFetcher = BehaviorSubject<List<String>>();
+  final BehaviorSubject<List<String>> _authorsFetcher = BehaviorSubject<List<String>>();
   final BehaviorSubject<Book?> _bookFetcher = BehaviorSubject<Book?>();
-  final BehaviorSubject<List<Book>?> _booksWithSameTagFetcher =
-      BehaviorSubject<List<Book>?>();
-  final BehaviorSubject<List<Book>?> _booksWithSameAuthorFetcher =
-      BehaviorSubject<List<Book>?>();
 
   Stream<List<Book>> get allBooks => _booksFetcher.stream;
   Stream<List<Book>> get finishedBooks => _finishedBooksFetcher.stream;
@@ -56,199 +36,319 @@ class BookCubit extends Cubit {
   Stream<List<int>> get finishedYears => _finishedYearsFetcher.stream;
   Stream<List<String>> get tags => _tagsFetcher.stream;
   Stream<List<String>> get authors => _authorsFetcher.stream;
-  Stream<List<Book>?> get booksWithSameTag => _booksWithSameTagFetcher.stream;
-  Stream<List<Book>?> get booksWithSameAuthor =>
-      _booksWithSameAuthorFetcher.stream;
-
   Stream<Book?> get book => _bookFetcher.stream;
 
-  BookCubit() : super(null) {
-    _initLoad();
+  BookCubit() : super([]) {
+    _updateFetchers(state);
   }
 
-  Future<void> _initLoad() async {
-    if (!await _checkIfCoverMigrationDone()) {
-      await _migrateCoversFromDatabaseToStorage();
+  void clearAllData() {
+    debugPrint("Clearing all local book data.");
+    emit([]);
+  }
+
+  void setRepository(ApiBookRepository repository) {
+    _repository = repository;
+    if (_repository?.uid != null) {
+      debugPrint("Repository set while user logged in. Fetching cloud state...");
+      fetchFromCloud();
+      _isInitialSyncComplete = true;
+    }
+  }
+
+  void setInitialSyncComplete(bool complete) {
+    debugPrint("Initial sync status set to: $complete");
+    _isInitialSyncComplete = complete;
+  }
+
+  @override
+  void onChange(Change<List<Book>> change) {
+    super.onChange(change);
+    _updateFetchers(change.nextState);
+  }
+
+  void _updateFetchers(List<Book> books) {
+    debugPrint("Updating fetchers with ${books.length} books.");
+    _booksFetcher.sink.add(books.where((b) => !b.deleted).toList());
+    
+    final finished = books.where((b) => b.status == BookStatus.read && !b.deleted).toList();
+    debugPrint("Found ${finished.length} finished books.");
+    _finishedBooksFetcher.sink.add(finished);
+    _finishedYearsFetcher.sink.add(_getFinishedYears(finished));
+    
+    _inProgressBooksFetcher.sink.add(books.where((b) => b.status == BookStatus.inProgress && !b.deleted).toList());
+    _toReadBooksFetcher.sink.add(books.where((b) => b.status == BookStatus.forLater && !b.deleted).toList());
+    _unfinishedBooksFetcher.sink.add(books.where((b) => b.status == BookStatus.unfinished && !b.deleted).toList());
+    _deletedBooksFetcher.sink.add(books.where((b) => b.deleted).toList());
+    
+    _tagsFetcher.sink.add(_getTags(books.where((b) => !b.deleted).toList()));
+    _authorsFetcher.sink.add(_getAuthors(books.where((b) => !b.deleted).toList()));
+  }
+
+  Future<void> fetchFromCloud() async {
+    final repo = _repository;
+    if (repo == null) {
+      debugPrint("[API_DEBUG] Fetch skipped: Repository is null.");
+      return;
+    }
+    try {
+      debugPrint("[API_DEBUG] Requesting all books from cloud...");
+      final cloudBooks = await repo.getBooks();
+      debugPrint("[API_DEBUG] Cloud returned ${cloudBooks.length} books.");
+      
+      emit(cloudBooks);
+    } catch (e) {
+      debugPrint("[API_DEBUG] Cloud fetch ERROR: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> syncLocalToCloud() async {
+    final repo = _repository;
+    if (repo == null) {
+      debugPrint("[API_DEBUG] Sync skipped: Repository is null.");
+      return;
+    }
+    if (state.isEmpty) {
+      debugPrint("[API_DEBUG] Sync skipped: Local state is empty.");
+      return;
     }
 
-    getFinishedBooks();
-    getInProgressBooks();
-    getToReadBooks();
-    getUnfinishedBooks();
-    getAllBooks();
+    try {
+      debugPrint("[API_DEBUG] Syncing ${state.length} local books to cloud...");
+      await repo.syncLocalBooks(state);
+      debugPrint("[API_DEBUG] Sync SUCCESS.");
+    } catch (e) {
+      debugPrint("[API_DEBUG] Sync ERROR: $e");
+      rethrow;
+    }
   }
 
   Future<void> getAllBooks({
     bool getTags = true,
     bool getAuthors = true,
   }) async {
-    List<Book> books = await repository.getAllNotDeletedBooks();
-    _booksFetcher.sink.add(books);
-
-    if (getTags) {
-      _tagsFetcher.sink.add(_getTags(books));
-    }
-
-    if (getAuthors) {
-      _authorsFetcher.sink.add(_getAuthors(books));
-    }
+    _updateFetchers(state);
   }
 
-  removeAllBooks() async {
-    await repository.removeAllBooks();
-
-    await getAllBooks();
-    await getAllBooksByStatus();
+  removeAllBooks() {
+    emit([]);
   }
 
   Future<void> getAllBooksByStatus() async {
-    await getFinishedBooks();
-    await getInProgressBooks();
-    await getToReadBooks();
-    await getUnfinishedBooks();
+    _updateFetchers(state);
   }
 
-  getFinishedBooks() async {
-    List<Book> books = await repository.getBooks(0);
-
-    _finishedBooksFetcher.sink.add(books);
-    _finishedYearsFetcher.sink.add(_getFinishedYears(books));
+  getFinishedBooks() {
+    _updateFetchers(state);
   }
 
-  getInProgressBooks() async {
-    List<Book> books = await repository.getBooks(1);
-    _inProgressBooksFetcher.sink.add(books);
+  getInProgressBooks() {
+    _updateFetchers(state);
   }
 
-  getToReadBooks() async {
-    List<Book> books = await repository.getBooks(2);
-    _toReadBooksFetcher.sink.add(books);
+  getToReadBooks() {
+    _updateFetchers(state);
   }
 
-  getDeletedBooks() async {
-    List<Book> books = await repository.getDeletedBooks();
-    _deletedBooksFetcher.sink.add(books);
+  getDeletedBooks() {
+    _updateFetchers(state);
   }
 
-  getUnfinishedBooks() async {
-    List<Book> books = await repository.getBooks(3);
-    _unfinishedBooksFetcher.sink.add(books);
+  getUnfinishedBooks() {
+    _updateFetchers(state);
   }
 
-  getSearchBooks(String query) async {
+  getSearchBooks(String query) {
     if (query.isEmpty) {
       _searchBooksFetcher.sink.add(List.empty());
     } else {
-      List<Book> books = await repository.searchBooks(query);
-      _searchBooksFetcher.sink.add(books);
+      final results = state.where((b) =>
+        !b.deleted &&
+        (b.title.toLowerCase().contains(query.toLowerCase()) ||
+         b.author.toLowerCase().contains(query.toLowerCase()))
+      ).toList();
+      _searchBooksFetcher.sink.add(results);
     }
   }
 
-  Future<int> addBook(
-    Book book, {
-    bool refreshBooks = true,
-    Uint8List? cover,
-  }) async {
-    final bookID = await repository.insertBook(book);
+  Future<int> addBook(Book book, {bool refreshBooks = true, Uint8List? cover}) async {
+    final dateNow = DateTime.now();
+    final date = DateTime(dateNow.year, dateNow.month, dateNow.day);
 
-    await _saveCoverToStorage(bookID, cover);
-
-    if (refreshBooks) {
-      getAllBooksByStatus();
-      getAllBooks();
-    }
-    return bookID;
-  }
-
-  Future<List<int>> importAdditionalBooks(List<Book> books) async {
-    final importedBookIDs = List<int>.empty(growable: true);
-
-    for (var book in books) {
-      final id = await repository.insertBook(book);
-      importedBookIDs.add(id);
+    List<Reading> readings = List<Reading>.from(book.readings);
+    if (book.status == BookStatus.read && readings.isEmpty) {
+      readings = [Reading(finishDate: date)];
+    } else if (book.status == BookStatus.inProgress && readings.isEmpty) {
+      readings = [Reading(startDate: date)];
     }
 
-    getAllBooksByStatus();
-    getAllBooks();
+    final tempId = -1 * (state.length + 1);
+    final newBook = book.copyWith(
+      id: tempId,
+      hasCover: cover != null,
+      cover: cover,
+      readings: readings,
+    );
 
-    return importedBookIDs;
-  }
+    emit(List<Book>.from(state)..add(newBook));
 
-  Future _saveCoverToStorage(int? bookID, Uint8List? cover) async {
-    if (bookID == null || cover == null) return;
-
-    final file = File('${appDocumentsDirectory.path}/$bookID.jpg');
-    await file.writeAsBytes(cover);
-  }
-
-  Future<void> updateBook(
-    Book book, {
-    Uint8List? cover,
-    BuildContext? context,
-  }) async {
-    repository.updateBook(book);
-    await _saveCoverToStorage(book.id!, cover);
-
-    if (context != null) {
-      // This looks bad but we need to wait for cover to be saved to storage
-      // before updating current book
-      context.read<CurrentBookCubit>().setBook(book.copyWith());
+    if (_repository != null) {
+      try {
+        final savedBook = await _repository!.upsertBook(newBook.copyWith(id: null));
+        if (savedBook != null && savedBook.id != null) {
+          final newState = state.map((b) => b.id == tempId ? savedBook : b).toList();
+          emit(newState);
+          
+          return savedBook.id!;
+        } else {
+          throw 'Server returned empty book after save.';
+        }
+      } catch (e) {
+        emit(state.where((b) => b.id != tempId).toList());
+        rethrow;
+      }
     }
 
-    emit(null);
-
-    getBook(book.id!);
-    getAllBooksByStatus();
-    getAllBooks();
+    return 0;
   }
 
-  bulkUpdateBookFormat(Set<int> ids, BookFormat bookFormat) async {
-    repository.bulkUpdateBookFormat(ids, bookFormat);
-    getAllBooksByStatus();
-    getAllBooks();
+  Future<void> refresh() async {
+    debugPrint("Manual refresh triggered.");
+    await fetchFromCloud();
   }
 
-  bulkUpdateBookAuthor(Set<int> ids, String author) async {
-    repository.bulkUpdateBookAuthor(ids, author);
-    getAllBooksByStatus();
-    getAllBooks();
+  Future<void> updateBook(Book book, {Uint8List? cover, BuildContext? context}) async {
+    final previousState = List<Book>.from(state);
+    
+    final updatedList = state.map((b) => b.id == book.id ? book : b).toList();
+    emit(updatedList);
+
+    if (_repository != null) {
+      try {
+        final updatedBook = await _repository!.upsertBook(book.copyWith(cover: cover, hasCover: cover != null || book.hasCover));
+        
+        if (updatedBook != null) {
+          final reconciledList = state.map((b) => b.id == updatedBook.id ? updatedBook : b).toList();
+          emit(reconciledList);
+          
+          if (context != null && context.mounted) {
+            context.read<CurrentBookCubit>().setBook(updatedBook);
+          }
+          if (updatedBook.id != null) {
+            getBook(updatedBook.id!);
+          }
+        } else {
+          throw 'Failed to update book in database.';
+        }
+      } catch (e) {
+        emit(previousState);
+        rethrow;
+      }
+    }
   }
 
-  deleteBook(int id) async {
-    repository.deleteBook(id);
-    getAllBooksByStatus();
-    getAllBooks();
+  Future<void> deleteBook(int id) async {
+    final newState = state.where((b) => b.id != id).toList();
+    emit(newState);
+
+    if (_repository != null) {
+      await _repository!.deleteBook(id);
+    }
+  }
+
+  Future<void> bulkDeleteBooks(List<int> ids) async {
+    final idsSet = ids.toSet();
+    final newState = state.where((b) => b.id == null || !idsSet.contains(b.id)).toList();
+    emit(newState);
+
+    if (_repository != null) {
+      await _repository!.bulkDeleteBooks(ids);
+    }
+  }
+
+  Book? findBookByISBN(String? isbn) {
+    if (isbn == null || isbn.trim().isEmpty) return null;
+    final cleanIsbn = isbn.replaceAll(RegExp(r'[\s\-]'), '').toLowerCase();
+    try {
+      return state.firstWhere(
+        (b) =>
+            !b.deleted &&
+            b.isbn != null &&
+            b.isbn!.replaceAll(RegExp(r'[\s\-]'), '').toLowerCase() == cleanIsbn,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> bulkUpdateStatus(List<int> ids, BookStatus newStatus) async {
+    final idsSet = ids.toSet();
+    final dateNow = DateTime.now();
+    final date = DateTime(dateNow.year, dateNow.month, dateNow.day);
+
+    final updatedList = state.map((b) {
+      if (b.id != null && idsSet.contains(b.id)) {
+        List<Reading> readings = List<Reading>.from(b.readings);
+        if (newStatus == BookStatus.read) {
+          if (readings.isEmpty) {
+            readings = [Reading(finishDate: date)];
+          } else {
+            final last = readings.last;
+            if (last.finishDate == null) {
+              readings[readings.length - 1] = last.copyWith(finishDate: date);
+            }
+          }
+        }
+        return b.copyWith(status: newStatus, readings: readings);
+      }
+      return b;
+    }).toList();
+
+    emit(updatedList);
+
+    if (_repository != null) {
+      for (final id in ids) {
+        final book = updatedList.firstWhere((b) => b.id == id, orElse: () => state.first);
+        if (book.id == id) {
+          try {
+            await _repository!.upsertBook(book);
+          } catch (e) {
+            debugPrint("Error updating book $id in cloud: $e");
+          }
+        }
+      }
+    }
   }
 
   Future<Book?> getBook(int id) async {
-    Book? book = await repository.getBook(id);
-    _bookFetcher.sink.add(book);
-
-    return book;
+    try {
+      final book = state.firstWhere((b) => b.id == id);
+      _bookFetcher.sink.add(book);
+      return book;
+    } catch (e) {
+      _bookFetcher.sink.add(null);
+      return null;
+    }
   }
 
   List<int> _getFinishedYears(List<Book> books) {
     final years = List<int>.empty(growable: true);
-
     for (var book in books) {
       for (var date in book.readings) {
         if (date.finishDate != null) {
           if (!years.contains(date.finishDate!.year)) {
-            //TODO check if years should be duplicated or not
             years.add(date.finishDate!.year);
           }
         }
       }
     }
-
     years.sort((a, b) => b.compareTo(a));
-
     return years;
   }
 
   List<String> _getTags(List<Book> books) {
     final tags = List<String>.empty(growable: true);
-
     for (var book in books) {
       if (book.tags != null) {
         for (var tag in book.tags!.split('|||||')) {
@@ -258,101 +358,18 @@ class BookCubit extends Cubit {
         }
       }
     }
-
     tags.sort((a, b) => a.compareTo(b));
-
     return tags;
   }
 
   List<String> _getAuthors(List<Book> books) {
     final authors = List<String>.empty(growable: true);
-
     for (var book in books) {
       if (!authors.contains(book.author)) {
         authors.add(book.author);
       }
     }
-
     authors.sort((a, b) => a.compareTo(b));
-
     return authors;
-  }
-
-  Future<bool> _checkIfCoverMigrationDone() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final bool? check = prefs.getBool(SharedPreferencesKeys.coverMigrationDone);
-
-    return check == true ? true : false;
-  }
-
-  Future<void> _migrateCoversFromDatabaseToStorage() async {
-    List<Book> allBooks = await repository.getAllBooks();
-
-    for (var book in allBooks) {
-      if (book.cover != null) {
-        final directory = await getApplicationDocumentsDirectory();
-        final file = File('${directory.path}/${book.id}.jpg');
-
-        await file.writeAsBytes(book.cover!);
-
-        Book updatedBook = book.copyWithNullCover();
-        updatedBook = book.copyWith(hasCover: true);
-
-        await repository.updateBook(updatedBook);
-      }
-    }
-
-    await _saveCoverMigrationStatus();
-  }
-
-  Future<void> _saveCoverMigrationStatus() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setBool(SharedPreferencesKeys.coverMigrationDone, true);
-  }
-
-  getBooksWithSameTag(String tag) async {
-    _booksWithSameTagFetcher.sink.add(null);
-
-    List<Book> books = await repository.getBooksWithSameTag(tag);
-
-    _booksWithSameTagFetcher.sink.add(books);
-  }
-
-  getBooksWithSameAuthor(String author) async {
-    _booksWithSameAuthorFetcher.sink.add(null);
-
-    List<Book> books = await repository.getBooksWithSameAuthor(author);
-
-    _booksWithSameAuthorFetcher.sink.add(books);
-  }
-
-  Future<bool> downloadCoverByISBN(Book book) async {
-    if (book.isbn == null) return false;
-    if (book.isbn!.isEmpty) return false;
-
-    final cover = await OpenLibraryService().getCover(book.isbn!);
-    if (cover == null) return false;
-
-    final file = File('${appDocumentsDirectory.path}/${book.id}.jpg');
-    await file.writeAsBytes(cover);
-
-    final blurHash = _generateBlurHash(cover);
-
-    await bookCubit.updateBook(book.copyWith(
-      hasCover: true,
-      blurHash: blurHash,
-    ));
-
-    return true;
-  }
-
-  static String? _generateBlurHash(Uint8List? cover) {
-    if (cover == null) return null;
-
-    return blurhash_dart.BlurHash.encode(
-      img.decodeImage(cover)!,
-      numCompX: Constants.blurHashX,
-      numCompY: Constants.blurHashY,
-    ).hash;
   }
 }

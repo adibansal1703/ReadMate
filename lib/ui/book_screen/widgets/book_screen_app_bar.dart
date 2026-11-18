@@ -1,18 +1,15 @@
-import 'dart:io';
-
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/bloc/theme_bloc/theme_bloc.dart';
-import 'package:openreads/logic/cubit/current_book_cubit.dart';
-import 'package:openreads/logic/cubit/edit_book_cubit.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/ui/add_book_screen/add_book_screen.dart';
+import 'package:readmate/core/themes/app_theme.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/bloc/theme_bloc/theme_bloc.dart';
+import 'package:readmate/logic/cubit/current_book_cubit.dart';
+import 'package:readmate/logic/cubit/edit_book_cubit.dart';
+import 'package:readmate/main.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/ui/add_book_screen/add_book_screen.dart';
 
 class BookScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
   const BookScreenAppBar({super.key});
@@ -31,12 +28,10 @@ class BookScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog.adaptive(
-          shape: Platform.isAndroid
-              ? RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(cornerRadius),
-                )
-              : null,
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(cornerRadius),
+          ),
           title: Text(
             deleted
                 ? deletePermanently == true
@@ -47,55 +42,37 @@ class BookScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           actionsAlignment: MainAxisAlignment.spaceBetween,
           actions: [
-            Platform.isIOS
-                ? CupertinoDialogAction(
-                    onPressed: () => _deleteAction(
-                      deletePermanently: deletePermanently,
-                      book: book,
-                      context: context,
-                      deleted: deleted,
-                    ),
-                    child: Text(LocaleKeys.yes.tr()),
-                  )
-                : FilledButton(
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(cornerRadius),
-                      ),
-                    ),
-                    onPressed: () => _deleteAction(
-                      deletePermanently: deletePermanently,
-                      book: book,
-                      context: context,
-                      deleted: deleted,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(LocaleKeys.yes.tr()),
-                    ),
-                  ),
-            Platform.isIOS
-                ? CupertinoDialogAction(
-                    isDefaultAction: true,
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(LocaleKeys.no.tr()),
-                  )
-                : FilledButton.tonal(
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(cornerRadius),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(LocaleKeys.no.tr()),
-                    ),
-                  ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(cornerRadius),
+                ),
+              ),
+              onPressed: () => _deleteAction(
+                deletePermanently: deletePermanently,
+                book: book,
+                context: context,
+                deleted: deleted,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(LocaleKeys.yes.tr()),
+              ),
+            ),
+            FilledButton.tonal(
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(cornerRadius),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(LocaleKeys.no.tr()),
+              ),
+            ),
           ],
         );
       },
@@ -144,8 +121,6 @@ class BookScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
       LocaleKeys.duplicateBook.tr(),
     ];
 
-    // Needed to add BlocBuilder because the status bar was changing
-    // to different color then in BooksScreen
     return BlocBuilder<ThemeBloc, ThemeState>(
       builder: (context, state) {
         final themeMode = (state as SetThemeState).themeMode;
@@ -180,7 +155,7 @@ class BookScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
                 return PopupMenuButton<String>(
                   onSelected: (_) {},
                   itemBuilder: (_) {
-                    return moreButtonOptions.map((String choice) {
+                    return moreButtonOptions.map<PopupMenuEntry<String>>((String choice) {
                       return PopupMenuItem<String>(
                         value: choice,
                         child: Text(choice),
@@ -218,9 +193,7 @@ class BookScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
 
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => const AddBookScreen(
-                                  duplicatingBook: true,
-                                ),
+                                builder: (_) => const AddBookScreen(),
                               ),
                             );
                           } else if (choice == moreButtonOptions[2]) {

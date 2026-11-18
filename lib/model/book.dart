@@ -1,13 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/model/reading.dart';
-import 'package:openreads/model/book_from_backup_v3.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/main.dart';
+import 'package:readmate/model/reading.dart';
 
 class Book {
   int? id;
@@ -24,9 +20,10 @@ class Book {
   String? isbn;
   String? olid;
   String? tags;
-  String? myReview;
   String? notes;
-  Uint8List? cover; // Not used since 2.2.0
+  int currentPage;
+  Uint8List? cover;
+  String? coverUrl;
   String? blurHash;
   BookFormat bookFormat;
   bool hasCover;
@@ -49,9 +46,10 @@ class Book {
     this.isbn,
     this.olid,
     this.tags,
-    this.myReview,
     this.notes,
+    this.currentPage = 0,
     this.cover,
+    this.coverUrl,
     this.blurHash,
     this.bookFormat = BookFormat.paperback,
     this.hasCover = false,
@@ -83,45 +81,76 @@ class Book {
   }
 
   factory Book.fromJSON(Map<String, dynamic> json) {
-    return Book(
-      id: json['id'],
-      title: json['title'],
-      subtitle: json['subtitle'],
-      author: json['author'],
-      description: json['description'],
-      status: parseBookStatus(json['status']),
-      rating: json['rating'],
-      favourite: (json['favourite'] == 1) ? true : false,
-      hasCover: (json['has_cover'] == 1) ? true : false,
-      deleted: (json['deleted'] == 1) ? true : false,
-      pages: json['pages'],
-      publicationYear: json['publication_year'],
-      isbn: json['isbn'],
-      olid: json['olid'],
-      tags: json['tags'],
-      myReview: json['my_review'],
-      notes: json['notes'],
-      cover: json['cover'] != null
-          ? Uint8List.fromList(json['cover'].cast<int>().toList())
-          : null,
-      blurHash: json['blur_hash'],
-      bookFormat: json['book_type'] == 'audiobook'
-          ? BookFormat.audiobook
-          : json['book_type'] == 'ebook'
-              ? BookFormat.ebook
-              : json['book_type'] == 'hardcover'
-                  ? BookFormat.hardcover
-                  : json['book_type'] == 'paperback'
-                      ? BookFormat.paperback
-                      : BookFormat.paperback,
-      readings: _sortReadings(_parseReadingsFromJson(json)),
-      dateAdded: json['date_added'] != null
-          ? DateTime.parse(json['date_added'])
-          : DateTime.now(),
-      dateModified: json['date_modified'] != null
-          ? DateTime.parse(json['date_modified'])
-          : DateTime.now(),
-    );
+    try {
+      return Book(
+        id: json['id'],
+        title: json['title'] ?? 'Unknown Title',
+        subtitle: json['subtitle'],
+        author: json['author'] ?? 'Unknown Author',
+        description: json['description'],
+        status: parseBookStatus(json['status']),
+        rating: json['rating'],
+        favourite: (json['favourite'] == 1 || json['favourite'] == true),
+        hasCover: (json['has_cover'] == 1 || json['has_cover'] == true || json['cover_url'] != null),
+        deleted: (json['deleted'] == 1 || json['deleted'] == true),
+        pages: json['pages'],
+        publicationYear: json['publication_year'],
+        isbn: json['isbn'],
+        olid: json['olid'],
+        tags: json['tags'],
+        notes: json['notes'],
+        currentPage: json['current_page'] ?? 0,
+        cover: _parseCover(json['cover']),
+        coverUrl: json['cover_url'],
+        blurHash: json['blur_hash'],
+        bookFormat: _parseBookFormat(json['book_type']),
+        readings: _sortReadings(_parseReadingsFromJson(json)),
+        dateAdded: _parseDateTime(json['date_added']),
+        dateModified: _parseDateTime(json['date_modified']),
+      );
+    } catch (e) {
+      debugPrint("Error parsing book JSON: $e");
+      return Book.empty().copyWith(
+        id: json['id'],
+        title: "Error loading book: ${json['title']}",
+      );
+    }
+  }
+
+  static Uint8List? _parseCover(dynamic cover) {
+    if (cover == null) return null;
+    if (cover is Uint8List) return cover;
+    try {
+      if (cover is List) {
+        return Uint8List.fromList(cover.cast<int>());
+      }
+    } catch (e) {
+      debugPrint("Failed to parse cover bytes: $e");
+    }
+    return null;
+  }
+
+  static DateTime _parseDateTime(dynamic date) {
+    if (date == null) return DateTime.now();
+    try {
+      return DateTime.parse(date.toString());
+    } catch (e) {
+      return DateTime.now();
+    }
+  }
+
+  static BookFormat _parseBookFormat(dynamic type) {
+    switch (type?.toString().toLowerCase()) {
+      case 'audiobook':
+        return BookFormat.audiobook;
+      case 'ebook':
+        return BookFormat.ebook;
+      case 'hardcover':
+        return BookFormat.hardcover;
+      case 'paperback':
+      default:
+        return BookFormat.paperback;
+    }
   }
 
   Book copyWith({
@@ -139,9 +168,10 @@ class Book {
     String? isbn,
     String? olid,
     String? tags,
-    String? myReview,
     String? notes,
+    int? currentPage,
     Uint8List? cover,
+    String? coverUrl,
     String? blurHash,
     BookFormat? bookFormat,
     bool? hasCover,
@@ -150,7 +180,7 @@ class Book {
     DateTime? dateModified,
   }) {
     return Book(
-      id: this.id ?? id,
+      id: id ?? this.id,
       title: title ?? this.title,
       subtitle: subtitle ?? this.subtitle,
       author: author ?? this.author,
@@ -164,9 +194,10 @@ class Book {
       isbn: isbn ?? this.isbn,
       olid: olid ?? this.olid,
       tags: tags ?? this.tags,
-      myReview: myReview ?? this.myReview,
       notes: notes ?? this.notes,
+      currentPage: currentPage ?? this.currentPage,
       cover: cover ?? this.cover,
+      coverUrl: coverUrl ?? this.coverUrl,
       blurHash: blurHash ?? this.blurHash,
       bookFormat: bookFormat ?? this.bookFormat,
       hasCover: hasCover ?? this.hasCover,
@@ -192,8 +223,8 @@ class Book {
       isbn: isbn,
       olid: olid,
       tags: tags,
-      myReview: myReview,
       notes: notes,
+      currentPage: currentPage,
       cover: null,
       blurHash: blurHash,
       bookFormat: bookFormat,
@@ -201,62 +232,6 @@ class Book {
       readings: readings,
       dateAdded: dateAdded,
       dateModified: dateModified,
-    );
-  }
-
-  factory Book.fromBookFromBackupV3(
-      BookFromBackupV3 oldBook, String? blurHash) {
-    return Book(
-      title: oldBook.bookTitle ?? '',
-      author: oldBook.bookAuthor ?? '',
-      status: oldBook.bookStatus == 'not_finished'
-          ? BookStatus.unfinished
-          : oldBook.bookStatus == 'to_read'
-              ? BookStatus.forLater
-              : oldBook.bookStatus == 'in_progress'
-                  ? BookStatus.inProgress
-                  : BookStatus.read,
-      rating: oldBook.bookRating != null
-          ? (oldBook.bookRating! * 10).toInt()
-          : null,
-      favourite: oldBook.bookIsFav == 1,
-      deleted: oldBook.bookIsDeleted == 1,
-      pages: oldBook.bookNumberOfPages,
-      publicationYear: oldBook.bookPublishYear,
-      isbn: oldBook.bookISBN13 ?? oldBook.bookISBN10,
-      olid: oldBook.bookOLID,
-      tags: oldBook.bookTags != null && oldBook.bookTags != 'null'
-          ? jsonDecode(oldBook.bookTags!).join('|||||')
-          : null, //TODO: improve saving tags
-      notes: oldBook.bookNotes,
-      cover: oldBook.bookCoverImg,
-      blurHash: blurHash,
-      bookFormat: BookFormat.paperback,
-      hasCover: false,
-      readings: (oldBook.bookStartDate == null ||
-                  oldBook.bookStartDate == "null" ||
-                  oldBook.bookStartDate == "none") &&
-              (oldBook.bookFinishDate == null ||
-                  oldBook.bookFinishDate == "null" ||
-                  oldBook.bookFinishDate == "none")
-          ? List<Reading>.empty(growable: true)
-          : [
-              Reading(
-                  startDate: oldBook.bookStartDate != null &&
-                          oldBook.bookStartDate != 'none' &&
-                          oldBook.bookStartDate != 'null'
-                      ? DateTime.fromMillisecondsSinceEpoch(
-                          int.parse(oldBook.bookStartDate!))
-                      : null,
-                  finishDate: oldBook.bookFinishDate != null &&
-                          oldBook.bookFinishDate != 'none' &&
-                          oldBook.bookFinishDate != 'null'
-                      ? DateTime.fromMillisecondsSinceEpoch(
-                          int.parse(oldBook.bookFinishDate!))
-                      : null)
-            ],
-      dateAdded: DateTime.now(),
-      dateModified: DateTime.now(),
     );
   }
 
@@ -269,17 +244,17 @@ class Book {
       'description': description,
       'status': status.value,
       'rating': rating,
-      'favourite': favourite ? 1 : 0,
-      'deleted': deleted ? 1 : 0,
+      'favourite': favourite,
+      'deleted': deleted,
       'pages': pages,
       'publication_year': publicationYear,
       'isbn': isbn,
       'olid': olid,
       'tags': tags,
-      'my_review': myReview,
       'notes': notes,
+      'current_page': currentPage,
       'blur_hash': blurHash,
-      'has_cover': hasCover ? 1 : 0,
+      'cover_url': coverUrl,
       'book_type': bookFormat == BookFormat.audiobook
           ? 'audiobook'
           : bookFormat == BookFormat.ebook
@@ -296,25 +271,23 @@ class Book {
   }
 
   File? getCoverFile() {
-    final fileExists =
-        File('${appDocumentsDirectory.path}/$id.jpg').existsSync();
-
-    if (fileExists) {
-      return File('${appDocumentsDirectory.path}/$id.jpg');
-    } else {
-      return null;
+    if (id != null) {
+      final file = File('${appDocumentsDirectory.path}/$id.jpg');
+      if (file.existsSync()) {
+        return file;
+      }
     }
+    return null;
   }
 
   Uint8List? getCoverBytes() {
-    final fileExists =
-        File('${appDocumentsDirectory.path}/$id.jpg').existsSync();
-
-    if (fileExists) {
-      return File('${appDocumentsDirectory.path}/$id.jpg').readAsBytesSync();
-    } else {
-      return null;
+    final file = getCoverFile();
+    if (file != null) {
+      try {
+        return file.readAsBytesSync();
+      } catch (_) {}
     }
+    return cover;
   }
 
   static List<Reading> _parseReadingsFromJson(Map<String, dynamic> json) {
@@ -327,8 +300,7 @@ class Book {
             final reading = Reading.fromString(e);
 
             if (reading.startDate == null &&
-                reading.finishDate == null &&
-                reading.customReadingTime == null) {
+                reading.finishDate == null) {
               return null;
             } else {
               return reading;
@@ -353,9 +325,6 @@ class Book {
     }
   }
 
-  // order readings
-  // first order the ones with only start date - first newest
-  // after them order ones with finish date - first newest
   static List<Reading> _sortReadings(List<Reading> readings) {
     final sortedReadings = readings;
 
@@ -367,6 +336,9 @@ class Book {
       } else if (a.finishDate != null && b.finishDate != null) {
         return b.finishDate!.compareTo(a.finishDate!);
       } else {
+        if (a.startDate == null && b.startDate == null) return 0;
+        if (a.startDate == null) return 1;
+        if (b.startDate == null) return -1;
         return b.startDate!.compareTo(a.startDate!);
       }
     });

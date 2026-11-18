@@ -1,20 +1,15 @@
-import 'dart:io';
-
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/cubit/selected_books_cubit.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/ui/add_book_screen/widgets/book_text_field.dart';
-import 'package:openreads/ui/add_book_screen/widgets/book_type_dropdown.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/core/themes/app_theme.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/cubit/selected_books_cubit.dart';
+import 'package:readmate/main.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/ui/add_book_screen/widgets/book_text_field.dart';
 
 class MultiSelectFAB extends StatelessWidget {
   MultiSelectFAB({super.key});
@@ -56,21 +51,20 @@ class MultiSelectFAB extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (Platform.isAndroid)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
-                  child: Container(
-                    height: 5,
-                    width: 40,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant
-                          .withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(50),
-                    ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
+                child: Container(
+                  height: 5,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(50),
                   ),
                 ),
+              ),
               const SizedBox(height: 10),
               _buildHeader(bulkEditOption),
               const SizedBox(height: 30),
@@ -117,8 +111,6 @@ class MultiSelectFAB extends StatelessWidget {
     }
 
     if (!context.mounted) return;
-
-    // context.read<PbSyncBloc>().add(TriggerSyncEvent(booksToSync: booksToSync));
   }
 
   Future<void> _updateBooksAuthor(
@@ -149,12 +141,6 @@ class MultiSelectFAB extends StatelessWidget {
       await bookCubit.updateBook(book);
     }
 
-    // if (context.mounted) {
-    //   context
-    //       .read<PbSyncBloc>()
-    //       .add(TriggerSyncEvent(booksToSync: booksToSync));
-    // }
-
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(LocaleKeys.update_successful_message.tr())),
@@ -165,61 +151,46 @@ class MultiSelectFAB extends StatelessWidget {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        return AlertDialog.adaptive(
-          shape: Platform.isAndroid
-              ? RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(cornerRadius),
-                )
-              : null,
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(cornerRadius),
+          ),
           title: Text(
             LocaleKeys.delete_books_question.tr(),
             style: const TextStyle(fontSize: 18),
           ),
           actionsAlignment: MainAxisAlignment.spaceBetween,
           actions: [
-            Platform.isIOS
-                ? CupertinoDialogAction(
-                    child: Text(LocaleKeys.no.tr()),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                  )
-                : FilledButton.tonal(
-                    style: ButtonStyle(
-                      shape: MaterialStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(cornerRadius),
-                        ),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(LocaleKeys.no.tr()),
-                    ),
+            FilledButton.tonal(
+              style: ButtonStyle(
+                shape: MaterialStateProperty.all(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(cornerRadius),
                   ),
-            Platform.isIOS
-                ? CupertinoDialogAction(
-                    isDefaultAction: true,
-                    child: Text(LocaleKeys.yes.tr()),
-                    onPressed: () => _bulkDeleteBooks(context, selectedList),
-                  )
-                : FilledButton(
-                    style: ButtonStyle(
-                      shape: MaterialStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(cornerRadius),
-                        ),
-                      ),
-                    ),
-                    onPressed: () => _bulkDeleteBooks(context, selectedList),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(LocaleKeys.yes.tr()),
-                    ),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(LocaleKeys.no.tr()),
+              ),
+            ),
+            FilledButton(
+              style: ButtonStyle(
+                shape: MaterialStateProperty.all(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(cornerRadius),
                   ),
+                ),
+              ),
+              onPressed: () => _bulkDeleteBooks(context, selectedList),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(LocaleKeys.yes.tr()),
+              ),
+            ),
           ],
         );
       },
@@ -227,26 +198,29 @@ class MultiSelectFAB extends StatelessWidget {
   }
 
   _bulkDeleteBooks(BuildContext context, List<int> selectedList) async {
-    List<Book> booksToSync = List.empty(growable: true);
-
-    for (final bookId in selectedList) {
-      Book? book = await bookCubit.getBook(bookId);
-
-      if (book == null) continue;
-      book = book.copyWith(deleted: true);
-      booksToSync.add(book);
-
-      await bookCubit.updateBook(book);
-    }
-
-    bookCubit.getDeletedBooks();
+    await bookCubit.bulkDeleteBooks(selectedList);
 
     if (!context.mounted) return;
-    // context.read<PbSyncBloc>().add(TriggerSyncEvent(booksToSync: booksToSync));
 
     context.read<SelectedBooksCubit>().resetSelection();
 
     Navigator.of(context).pop();
+  }
+
+  _bulkMoveToCompleted(BuildContext context, List<int> selectedList) async {
+    await bookCubit.bulkUpdateStatus(selectedList, BookStatus.read);
+
+    if (!context.mounted) return;
+
+    context.read<SelectedBooksCubit>().resetSelection();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          "Moved ${selectedList.length} book(s) to Completed shelf",
+        ),
+      ),
+    );
   }
 
   @override
@@ -268,6 +242,19 @@ class MultiSelectFAB extends StatelessWidget {
             children: [
               SpeedDialChild(
                 child: FaIcon(
+                  FontAwesomeIcons.check,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  size: 18,
+                ),
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                labelBackgroundColor:
+                    Theme.of(context).colorScheme.surfaceVariant,
+                foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                label: "Move to Completed",
+                onTap: () => _bulkMoveToCompleted(context, selectedList),
+              ),
+              SpeedDialChild(
+                child: FaIcon(
                   FontAwesomeIcons.bookOpen,
                   color: Theme.of(context).colorScheme.onSecondary,
                   size: 18,
@@ -278,30 +265,16 @@ class MultiSelectFAB extends StatelessWidget {
                 foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                 label: LocaleKeys.change_book_format.tr(),
                 onTap: () {
-                  if (Platform.isIOS) {
-                    showCupertinoModalBottomSheet(
+                  showModalBottomSheet(
+                      isScrollControlled: true,
                       context: context,
-                      expand: false,
-                      builder: (_) {
+                      builder: (context) {
                         return _buildBottomSheet(
                           context,
                           BulkEditOption.format,
                           selectedList,
                         );
-                      },
-                    );
-                  } else if (Platform.isAndroid) {
-                    showModalBottomSheet(
-                        isScrollControlled: true,
-                        context: context,
-                        builder: (context) {
-                          return _buildBottomSheet(
-                            context,
-                            BulkEditOption.format,
-                            selectedList,
-                          );
-                        });
-                  }
+                      });
                 },
               ),
               SpeedDialChild(
@@ -316,30 +289,16 @@ class MultiSelectFAB extends StatelessWidget {
                 foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
                 label: LocaleKeys.change_books_author.tr(),
                 onTap: () {
-                  if (Platform.isIOS) {
-                    showCupertinoModalBottomSheet(
+                  showModalBottomSheet(
+                      isScrollControlled: true,
                       context: context,
-                      expand: false,
-                      builder: (_) {
+                      builder: (context) {
                         return _buildBottomSheet(
                           context,
                           BulkEditOption.author,
                           selectedList,
                         );
-                      },
-                    );
-                  } else if (Platform.isAndroid) {
-                    showModalBottomSheet(
-                        isScrollControlled: true,
-                        context: context,
-                        builder: (context) {
-                          return _buildBottomSheet(
-                            context,
-                            BulkEditOption.author,
-                            selectedList,
-                          );
-                        });
-                  }
+                      });
                 },
               ),
               SpeedDialChild(
@@ -397,14 +356,22 @@ class MultiSelectFAB extends StatelessWidget {
     );
   }
 
-  BookTypeDropdown _buildEditFormat(
+  Widget _buildEditFormat(
     List<int> selectedList,
     BuildContext context,
   ) {
-    return BookTypeDropdown(
-      bookTypes: bookTypes,
-      padding: const EdgeInsets.all(0),
-      changeBookType: (bookType) {
+    return DropdownButtonFormField<String>(
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 10),
+      ),
+      items: bookTypes.map((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
+      onChanged: (bookType) {
         if (bookType == null) return;
         _updateBooksFormat(context, bookType, selectedList);
         Navigator.pop(context);

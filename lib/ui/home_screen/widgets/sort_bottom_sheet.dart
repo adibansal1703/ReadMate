@@ -5,20 +5,19 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_event.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_finished_books_bloc.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_for_later_books_bloc.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_in_progress_books_bloc.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_state.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_unfinished_books_bloc.dart';
-import 'package:openreads/logic/cubit/book_lists_order_cubit.dart';
-import 'package:openreads/logic/cubit/books_tab_index_cubit.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/ui/books_screen/widgets/widgets.dart';
+import 'package:readmate/core/themes/app_theme.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_event.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_finished_books_bloc.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_for_later_books_bloc.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_in_progress_books_bloc.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_state.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_unfinished_books_bloc.dart';
+import 'package:readmate/logic/cubit/book_lists_order_cubit.dart';
+import 'package:readmate/main.dart';
+import 'package:readmate/ui/books_screen/widgets/widgets.dart';
 
 class SortBottomSheet extends StatefulWidget {
   const SortBottomSheet({super.key});
@@ -238,7 +237,6 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
 
     chips.addAll(inactiveChips);
 
-    // Last chip is to select all/none years
     chips.add(
       YearFilterChip(
         dbYear: null,
@@ -308,7 +306,6 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
 
     chips.addAll(inactiveChips);
 
-    // Last chip is to select all/none tags
     chips.add(
       TagFilterChip(
         tag: null,
@@ -351,34 +348,29 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
               child: BlocBuilder<BookListsOrderCubit, List<BookStatus>>(
                 builder: (context, bookStatusList) {
-                  return BlocBuilder<BooksTabIndexCubit, int>(
-                    builder: (context, tabIndex) {
-                      switch (bookStatusList[tabIndex]) {
-                        case BookStatus.read:
-                          return BlocBuilder<SortFinishedBooksBloc, SortState>(
-                            builder: (context, state) =>
-                                _buildBody(BookStatus.read, state),
-                          );
-                        case BookStatus.inProgress:
-                          return BlocBuilder<SortInProgressBooksBloc,
-                              SortState>(
-                            builder: (context, state) =>
-                                _buildBody(BookStatus.inProgress, state),
-                          );
-                        case BookStatus.forLater:
-                          return BlocBuilder<SortForLaterBooksBloc, SortState>(
-                            builder: (context, state) =>
-                                _buildBody(BookStatus.forLater, state),
-                          );
-                        case BookStatus.unfinished:
-                          return BlocBuilder<SortUnfinishedBooksBloc,
-                              SortState>(
-                            builder: (context, state) =>
-                                _buildBody(BookStatus.unfinished, state),
-                          );
-                      }
-                    },
-                  );
+                  const tabIndex = 0;
+                  switch (bookStatusList[tabIndex]) {
+                    case BookStatus.read:
+                      return BlocBuilder<SortFinishedBooksBloc, SortState>(
+                        builder: (context, state) =>
+                            _buildBody(BookStatus.read, state),
+                      );
+                    case BookStatus.inProgress:
+                      return BlocBuilder<SortInProgressBooksBloc, SortState>(
+                        builder: (context, state) =>
+                            _buildBody(BookStatus.inProgress, state),
+                      );
+                    case BookStatus.forLater:
+                      return BlocBuilder<SortForLaterBooksBloc, SortState>(
+                        builder: (context, state) =>
+                            _buildBody(BookStatus.forLater, state),
+                      );
+                    case BookStatus.unfinished:
+                      return BlocBuilder<SortUnfinishedBooksBloc, SortState>(
+                        builder: (context, state) =>
+                            _buildBody(BookStatus.unfinished, state),
+                      );
+                  }
                 },
               ),
             ),
@@ -536,7 +528,6 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surfaceVariant,
                         borderRadius: BorderRadius.circular(cornerRadius),
-                        // border: Border.all(color: dividerColor),
                       ),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -582,7 +573,6 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceVariant,
                 borderRadius: BorderRadius.circular(cornerRadius),
-                // border: Border.all(color: dividerColor),
               ),
               child: Row(
                 children: [
@@ -619,7 +609,6 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
               buttonStyleData: ButtonStyleData(
                 height: 42,
                 decoration: BoxDecoration(
-                  // border: Border.all(color: dividerColor),
                   color: Theme.of(context).colorScheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(cornerRadius),
                 ),
@@ -647,7 +636,6 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(cornerRadius),
-            // border: Border.all(color: dividerColor),
           ),
           child: _getOrderButton(bookStatus, sortState),
         )
@@ -662,7 +650,6 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
         buttonStyleData: ButtonStyleData(
           height: 42,
           decoration: BoxDecoration(
-            // border: Border.all(color: dividerColor),
             color: Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(cornerRadius),
           ),
@@ -706,7 +693,6 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceVariant,
                 borderRadius: BorderRadius.circular(cornerRadius),
-                // border: Border.all(color: dividerColor),
               ),
               child: Row(
                 children: [
@@ -752,7 +738,6 @@ class _SortBottomSheetState extends State<SortBottomSheet> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceVariant,
                 borderRadius: BorderRadius.circular(cornerRadius),
-                // border: Border.all(color: dividerColor),
               ),
               child: Row(
                 children: [

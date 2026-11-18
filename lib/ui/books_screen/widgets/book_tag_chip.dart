@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/logic/cubit/books_tab_index_cubit.dart';
 
 class BooksTabChip extends StatefulWidget {
   const BooksTabChip({
@@ -31,10 +29,10 @@ class _BookTabChipState extends State<BooksTabChip> {
   void initState() {
     super.initState();
     widget.tabController.addListener(() {
-      // Scrolls the chip into view when the tab changes
       if (widget.index == widget.tabController.index) {
         _scrollToChip(widget.index, context);
       }
+      if (mounted) setState(() {});
     });
   }
 
@@ -42,9 +40,9 @@ class _BookTabChipState extends State<BooksTabChip> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
-      child: BlocBuilder<BooksTabIndexCubit, int>(
-        builder: (context, tabIndex) {
-          final isSelected = tabIndex == widget.index;
+      child: Builder(
+        builder: (context) {
+          final isSelected = widget.tabController.index == widget.index;
 
           return FilterChip(
             selectedColor: Theme.of(context).colorScheme.primaryContainer,
@@ -60,9 +58,11 @@ class _BookTabChipState extends State<BooksTabChip> {
             showCheckmark: false,
             onSelected: (bool _) {
               _scrollToChip(widget.index, context);
-              BlocProvider.of<BooksTabIndexCubit>(context)
-                  .setTabIndex(widget.index);
-              widget.tabController.index = widget.index;
+              widget.tabController.animateTo(
+                widget.index,
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeInOutCubic,
+              );
             },
           );
         },

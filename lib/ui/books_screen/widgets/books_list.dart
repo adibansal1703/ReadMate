@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/logic/cubit/current_book_cubit.dart';
-import 'package:openreads/logic/cubit/display_cubit.dart';
-import 'package:openreads/logic/cubit/selected_books_cubit.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/ui/book_screen/book_screen.dart';
-import 'package:openreads/ui/books_screen/widgets/widgets.dart';
+import 'package:readmate/logic/cubit/current_book_cubit.dart';
+import 'package:readmate/logic/cubit/selected_books_cubit.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/ui/book_screen/book_screen.dart';
+import 'package:readmate/ui/books_screen/widgets/widgets.dart';
 
 class BooksList extends StatefulWidget {
   const BooksList({
@@ -56,12 +54,6 @@ class _BooksListState extends State<BooksList>
 
     return CustomScrollView(
       slivers: [
-        widget.allBooksCount != null
-            ? NumberOfBooks(
-                filteredBooksCount: widget.books.length,
-                allBooksCount: widget.allBooksCount!,
-              )
-            : const SliverToBoxAdapter(),
         BlocBuilder<SelectedBooksCubit, List<int>>(builder: (context, list) {
           return _buildList(list: list);
         }),
@@ -87,30 +79,13 @@ class _BooksListState extends State<BooksList>
         Color? color = multiSelectMode && list.contains(widget.books[index].id)
             ? selectedCardColor
             : unselectedCardColor;
-        return BlocBuilder<DisplayCubit, DisplayState>(
-          builder: (context, state) {
-            if (state.type == DisplayType.compactList) {
-              return BookCardListCompact(
-                book: widget.books[index],
-                heroTag: heroTag,
-                cardColor: color,
-                addBottomPadding: (widget.books.length == index + 1),
-                onPressed: () => onPressed(index, multiSelectMode, heroTag),
-                onLongPressed: () => onLongPressed(index),
-              );
-            } else if (state.type == DisplayType.list) {
-              return BookCardList(
-                book: widget.books[index],
-                heroTag: heroTag,
-                cardColor: color,
-                addBottomPadding: (widget.books.length == index + 1),
-                onPressed: () => onPressed(index, multiSelectMode, heroTag),
-                onLongPressed: () => onLongPressed(index),
-              );
-            } else {
-              return const SizedBox.shrink();
-            }
-          },
+        return BookCardList(
+          book: widget.books[index],
+          heroTag: heroTag,
+          cardColor: color,
+          addBottomPadding: (widget.books.length == index + 1),
+          onPressed: () => onPressed(index, multiSelectMode, heroTag),
+          onLongPressed: () => onLongPressed(index),
         );
       },
     );

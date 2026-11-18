@@ -1,15 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/constants/constants.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/bloc/rating_type_bloc/rating_type_bloc.dart';
-import 'package:openreads/logic/bloc/theme_bloc/theme_bloc.dart';
-import 'package:openreads/ui/settings_screen/settings_accent_screen.dart';
-import 'package:openreads/ui/settings_screen/widgets/widgets.dart';
+import 'package:readmate/core/constants/constants.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/core/themes/app_theme.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/bloc/rating_type_bloc/rating_type_bloc.dart';
+import 'package:readmate/logic/bloc/theme_bloc/theme_bloc.dart';
+import 'package:readmate/ui/settings_screen/settings_accent_screen.dart';
+import 'package:readmate/ui/settings_screen/widgets/widgets.dart';
 import 'package:settings_ui/settings_ui.dart';
 
 class SettingsApperanceScreen extends StatelessWidget {
@@ -46,17 +45,22 @@ class SettingsApperanceScreen extends StatelessWidget {
                       const SizedBox(height: 15),
                       SettingsDialogButton(
                         text: LocaleKeys.theme_mode_system.tr(),
-                        onPressed: () => _setThemeModeAuto(context, state),
+                        onPressed: () => _setTheme(context, state, ThemeMode.system, false),
                       ),
                       const SizedBox(height: 5),
                       SettingsDialogButton(
                         text: LocaleKeys.theme_mode_light.tr(),
-                        onPressed: () => _setThemeModeLight(context, state),
+                        onPressed: () => _setTheme(context, state, ThemeMode.light, false),
                       ),
                       const SizedBox(height: 5),
                       SettingsDialogButton(
-                        text: LocaleKeys.theme_mode_dark.tr(),
-                        onPressed: () => _setThemeModeDark(context, state),
+                        text: "${LocaleKeys.theme_mode_dark.tr()} (${LocaleKeys.dark_mode_natural.tr()})",
+                        onPressed: () => _setTheme(context, state, ThemeMode.dark, false),
+                      ),
+                      const SizedBox(height: 5),
+                      SettingsDialogButton(
+                        text: "${LocaleKeys.theme_mode_dark.tr()} (${LocaleKeys.dark_mode_amoled.tr()})",
+                        onPressed: () => _setTheme(context, state, ThemeMode.dark, true),
                       ),
                     ],
                   );
@@ -71,55 +75,15 @@ class SettingsApperanceScreen extends StatelessWidget {
     );
   }
 
-  _showDarkModeDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(cornerRadius),
-          ),
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-            child: BlocBuilder<ThemeBloc, ThemeState>(
-              builder: (context, state) {
-                if (state is SetThemeState) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 10),
-                        child: Text(
-                          LocaleKeys.dark_mode_style.tr(),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      SettingsDialogButton(
-                        text: LocaleKeys.dark_mode_natural.tr(),
-                        onPressed: () => _setDarkMode(context, state, false),
-                      ),
-                      const SizedBox(height: 5),
-                      SettingsDialogButton(
-                        text: LocaleKeys.dark_mode_amoled.tr(),
-                        onPressed: () => _setDarkMode(context, state, true),
-                      ),
-                    ],
-                  );
-                } else {
-                  return const SizedBox();
-                }
-              },
-            ),
-          ),
-        );
-      },
-    );
+  _setTheme(BuildContext context, SetThemeState state, ThemeMode mode, bool amoled) {
+    BlocProvider.of<ThemeBloc>(context).add(ChangeThemeEvent(
+      themeMode: mode,
+      primaryColor: state.primaryColor,
+      fontFamily: state.fontFamily,
+      useMaterialYou: state.useMaterialYou,
+      amoledDark: amoled,
+    ));
+    Navigator.of(context).pop();
   }
 
   _showFontDialog(BuildContext context) {
@@ -158,14 +122,6 @@ class SettingsApperanceScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                SettingsDialogButton(
-                                  text: LocaleKeys.font_default.tr(),
-                                  onPressed: () => _setFont(
-                                    context,
-                                    state,
-                                    null,
-                                  ),
-                                ),
                                 for (var font in Constants.fonts) ...[
                                   const SizedBox(height: 5),
                                   SettingsDialogButton(
@@ -194,54 +150,6 @@ class SettingsApperanceScreen extends StatelessWidget {
         );
       },
     );
-  }
-
-  _setThemeModeAuto(BuildContext context, SetThemeState state) {
-    BlocProvider.of<ThemeBloc>(context).add(ChangeThemeEvent(
-      themeMode: ThemeMode.system,
-      primaryColor: state.primaryColor,
-      fontFamily: state.fontFamily,
-      useMaterialYou: state.useMaterialYou,
-      amoledDark: state.amoledDark,
-    ));
-
-    Navigator.of(context).pop();
-  }
-
-  _setThemeModeLight(BuildContext context, SetThemeState state) {
-    BlocProvider.of<ThemeBloc>(context).add(ChangeThemeEvent(
-      themeMode: ThemeMode.light,
-      primaryColor: state.primaryColor,
-      fontFamily: state.fontFamily,
-      useMaterialYou: state.useMaterialYou,
-      amoledDark: state.amoledDark,
-    ));
-
-    Navigator.of(context).pop();
-  }
-
-  _setThemeModeDark(BuildContext context, SetThemeState state) {
-    BlocProvider.of<ThemeBloc>(context).add(ChangeThemeEvent(
-      themeMode: ThemeMode.dark,
-      primaryColor: state.primaryColor,
-      fontFamily: state.fontFamily,
-      useMaterialYou: state.useMaterialYou,
-      amoledDark: state.amoledDark,
-    ));
-
-    Navigator.of(context).pop();
-  }
-
-  _setDarkMode(BuildContext context, SetThemeState state, bool amoledDark) {
-    BlocProvider.of<ThemeBloc>(context).add(ChangeThemeEvent(
-      themeMode: ThemeMode.dark,
-      primaryColor: state.primaryColor,
-      fontFamily: state.fontFamily,
-      useMaterialYou: state.useMaterialYou,
-      amoledDark: amoledDark,
-    ));
-
-    Navigator.of(context).pop();
   }
 
   _setFont(
@@ -349,8 +257,7 @@ class SettingsApperanceScreen extends StatelessWidget {
               SettingsSection(
                 tiles: <SettingsTile>[
                   _buildAccentSetting(context),
-                  _buildThemeModeSetting(context),
-                  _buildDarkModeSetting(context),
+                  _buildCombinedThemeSetting(context),
                   _buildFontSetting(context),
                   _buildRatingTypeSetting(context),
                 ],
@@ -362,7 +269,7 @@ class SettingsApperanceScreen extends StatelessWidget {
     );
   }
 
-  SettingsTile _buildThemeModeSetting(BuildContext context) {
+  SettingsTile _buildCombinedThemeSetting(BuildContext context) {
     return SettingsTile(
       title: Text(
         LocaleKeys.theme_mode.tr(),
@@ -370,65 +277,28 @@ class SettingsApperanceScreen extends StatelessWidget {
           fontSize: 16,
         ),
       ),
-      leading: const Icon(Icons.sunny),
+      leading: const Icon(Icons.palette),
       description: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (_, themeState) {
           if (themeState is SetThemeState) {
+            String modeStr;
             switch (themeState.themeMode) {
               case ThemeMode.light:
-                return Text(
-                  LocaleKeys.theme_mode_light.tr(),
-                  style: const TextStyle(),
-                );
+                modeStr = LocaleKeys.theme_mode_light.tr();
+                break;
               case ThemeMode.dark:
-                return Text(
-                  LocaleKeys.theme_mode_dark.tr(),
-                  style: const TextStyle(),
-                );
+                modeStr = "${LocaleKeys.theme_mode_dark.tr()} (${themeState.amoledDark ? LocaleKeys.dark_mode_amoled.tr() : LocaleKeys.dark_mode_natural.tr()})";
+                break;
               default:
-                return Text(
-                  LocaleKeys.theme_mode_system.tr(),
-                  style: const TextStyle(),
-                );
+                modeStr = LocaleKeys.theme_mode_system.tr();
             }
+            return Text(modeStr);
           } else {
             return const SizedBox();
           }
         },
       ),
       onPressed: (context) => _showThemeModeDialog(context),
-    );
-  }
-
-  SettingsTile _buildDarkModeSetting(BuildContext context) {
-    return SettingsTile(
-      title: Text(
-        LocaleKeys.dark_mode_style.tr(),
-        style: const TextStyle(
-          fontSize: 16,
-        ),
-      ),
-      leading: const Icon(Icons.contrast),
-      description: BlocBuilder<ThemeBloc, ThemeState>(
-        builder: (_, themeState) {
-          if (themeState is SetThemeState) {
-            if (themeState.amoledDark) {
-              return Text(
-                LocaleKeys.dark_mode_amoled.tr(),
-                style: const TextStyle(),
-              );
-            } else {
-              return Text(
-                LocaleKeys.dark_mode_natural.tr(),
-                style: const TextStyle(),
-              );
-            }
-          } else {
-            return const SizedBox();
-          }
-        },
-      ),
-      onPressed: (context) => _showDarkModeDialog(context),
     );
   }
 
@@ -516,7 +386,7 @@ class SettingsApperanceScreen extends StatelessWidget {
               );
             } else {
               return Text(
-                '0xFF${themeState.primaryColor.hex}',
+                '0xFF${themeState.primaryColor.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
                 style: const TextStyle(),
               );
             }

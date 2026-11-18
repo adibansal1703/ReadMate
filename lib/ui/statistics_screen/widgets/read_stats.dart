@@ -2,10 +2,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/logic/cubit/current_book_cubit.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/ui/book_screen/book_screen.dart';
+import 'package:readmate/core/themes/app_theme.dart';
+import 'package:readmate/logic/cubit/current_book_cubit.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/ui/book_screen/book_screen.dart';
+import 'package:readmate/ui/common/book_cover.dart';
 
 class ReadStats extends StatelessWidget {
   const ReadStats({
@@ -24,12 +25,14 @@ class ReadStats extends StatelessWidget {
   final Book? book;
 
   onTap(BuildContext context, int heroKey) {
-    context.read<CurrentBookCubit>().setBook(book!);
+    final b = book;
+    if (b == null) return;
+    context.read<CurrentBookCubit>().setBook(b);
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => BookScreen(heroTag: '${book?.id}-$heroKey'),
+        builder: (context) => BookScreen(heroTag: '${b.id}-$heroKey'),
       ),
     );
   }
@@ -60,19 +63,16 @@ class ReadStats extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  book != null && book!.getCoverFile() != null
-                      ? Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: Hero(
-                            tag: '${book?.id}-$heroKey',
-                            child: Image.file(
-                              book!.getCoverFile()!,
-                              fit: BoxFit.cover,
-                              width: 70,
-                            ),
-                          ),
-                        )
-                      : const SizedBox(),
+                  if (book != null && book!.hasCover)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: BookCover(
+                        book: book!,
+                        width: 70,
+                        height: 70 * 1.5,
+                        heroTag: '${book?.id}-$heroKey',
+                      ),
+                    ),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

@@ -2,22 +2,22 @@ import 'package:diacritic/diacritic.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/constants/enums/book_format.dart';
-import 'package:openreads/core/constants/enums/book_status.dart';
-import 'package:openreads/core/constants/enums/display_type.dart';
-import 'package:openreads/core/constants/enums/sort_type.dart';
-import 'package:openreads/core/helpers/helpers.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_finished_books_bloc.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_for_later_books_bloc.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_in_progress_books_bloc.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_state.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_unfinished_books_bloc.dart';
-import 'package:openreads/logic/cubit/book_lists_order_cubit.dart';
-import 'package:openreads/logic/cubit/display_cubit.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/ui/books_screen/widgets/widgets.dart';
+import 'package:readmate/core/constants/enums/book_format.dart';
+import 'package:readmate/core/constants/enums/book_status.dart';
+import 'package:readmate/core/constants/enums/display_type.dart';
+import 'package:readmate/core/constants/enums/sort_type.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_finished_books_bloc.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_for_later_books_bloc.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_in_progress_books_bloc.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_state.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_unfinished_books_bloc.dart';
+import 'package:readmate/logic/cubit/book_lists_order_cubit.dart';
+import 'package:readmate/logic/cubit/display_cubit.dart';
+import 'package:readmate/main.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/model/reading.dart';
+import 'package:readmate/ui/books_screen/widgets/widgets.dart';
 
 class BooksScreen extends StatefulWidget {
   const BooksScreen({super.key});
@@ -245,7 +245,6 @@ class _BooksScreenState extends State<BooksScreen>
     return filteredOut;
   }
 
-  // Return list of books that do not have selected tags
   List<Book> _filterOutSelectedTags(
     List<Book> list,
     String tags,
@@ -313,7 +312,6 @@ class _BooksScreenState extends State<BooksScreen>
             .compareTo(removeDiacritics(b.title.toString().toLowerCase())))
         : list.sort((b, a) => removeDiacritics(a.title.toString().toLowerCase())
             .compareTo(removeDiacritics(b.title.toString().toLowerCase())));
-    // no secondary sorting
 
     return list;
   }
@@ -327,9 +325,8 @@ class _BooksScreenState extends State<BooksScreen>
           .compareTo(removeDiacritics(b.author.toString().toLowerCase()));
       if (!isAsc) {
         authorSorting *= -1;
-      } // descending
+      }
       if (authorSorting == 0) {
-        // secondary sorting, by release date
         int releaseSorting = 0;
         if ((a.publicationYear != null) && (b.publicationYear != null)) {
           releaseSorting = a.publicationYear!.compareTo(b.publicationYear!);
@@ -338,7 +335,6 @@ class _BooksScreenState extends State<BooksScreen>
           }
         }
         if (releaseSorting == 0) {
-          // tertiary sorting, by title
           int titleSorting = removeDiacritics(a.title.toString().toLowerCase())
               .compareTo(removeDiacritics(b.title.toString().toLowerCase()));
           if (!isAsc) {
@@ -369,9 +365,8 @@ class _BooksScreenState extends State<BooksScreen>
       int ratingSorting = a.rating!.compareTo(b.rating!);
       if (!isAsc) {
         ratingSorting *= -1;
-      } // descending
+      }
       if (ratingSorting == 0) {
-        // secondary sorting, by release date
         int releaseSorting = 0;
         if ((a.publicationYear != null) && (b.publicationYear != null)) {
           releaseSorting = a.publicationYear!.compareTo(b.publicationYear!);
@@ -380,7 +375,6 @@ class _BooksScreenState extends State<BooksScreen>
           }
         }
         if (releaseSorting == 0) {
-          // tertiary sorting, by title
           int titleSorting = removeDiacritics(a.title.toString().toLowerCase())
               .compareTo(removeDiacritics(b.title.toString().toLowerCase()));
           if (!isAsc) {
@@ -413,9 +407,8 @@ class _BooksScreenState extends State<BooksScreen>
       int pagesSorting = a.pages!.compareTo(b.pages!);
       if (!isAsc) {
         pagesSorting *= -1;
-      } // descending
+      }
       if (pagesSorting == 0) {
-        // secondary sorting, by release date
         int releaseSorting = 0;
         if ((a.publicationYear != null) && (b.publicationYear != null)) {
           releaseSorting = a.publicationYear!.compareTo(b.publicationYear!);
@@ -424,7 +417,6 @@ class _BooksScreenState extends State<BooksScreen>
           }
         }
         if (releaseSorting == 0) {
-          // tertiary sorting, by title
           int titleSorting = removeDiacritics(a.title.toString().toLowerCase())
               .compareTo(removeDiacritics(b.title.toString().toLowerCase()));
           if (!isAsc) {
@@ -450,9 +442,8 @@ class _BooksScreenState extends State<BooksScreen>
 
       if (!isAsc) {
         dateAddedSorting *= -1;
-      } // descending
+      }
       if (dateAddedSorting == 0) {
-        // secondary sorting, by release date
         int releaseSorting = 0;
         if ((a.publicationYear != null) && (b.publicationYear != null)) {
           releaseSorting = a.publicationYear!.compareTo(b.publicationYear!);
@@ -461,7 +452,6 @@ class _BooksScreenState extends State<BooksScreen>
           }
         }
         if (releaseSorting == 0) {
-          // tertiary sorting, by title
           int titleSorting = removeDiacritics(a.title.toString().toLowerCase())
               .compareTo(removeDiacritics(b.title.toString().toLowerCase()));
           if (!isAsc) {
@@ -487,9 +477,8 @@ class _BooksScreenState extends State<BooksScreen>
 
       if (!isAsc) {
         dateModifiedSorting *= -1;
-      } // descending
+      }
       if (dateModifiedSorting == 0) {
-        // secondary sorting, by release date
         int releaseSorting = 0;
         if ((a.publicationYear != null) && (b.publicationYear != null)) {
           releaseSorting = a.publicationYear!.compareTo(b.publicationYear!);
@@ -498,7 +487,6 @@ class _BooksScreenState extends State<BooksScreen>
           }
         }
         if (releaseSorting == 0) {
-          // tertiary sorting, by title
           int titleSorting = removeDiacritics(a.title.toString().toLowerCase())
               .compareTo(removeDiacritics(b.title.toString().toLowerCase()));
           if (!isAsc) {
@@ -518,114 +506,40 @@ class _BooksScreenState extends State<BooksScreen>
     required List<Book> list,
     required bool isAsc,
   }) {
-    List<Book> booksWithoutStartDate = List.empty(growable: true);
-    List<Book> booksWithStartDate = List.empty(growable: true);
+    list.sort((a, b) {
+      DateTime? aDate;
+      DateTime? bDate;
 
-    for (Book book in list) {
-      bool hasStartDate = false;
+      if (a.readings.isNotEmpty) aDate = a.readings[0].startDate;
+      if (b.readings.isNotEmpty) bDate = b.readings[0].startDate;
 
-      for (final reading in book.readings) {
-        if (reading.startDate != null) {
-          hasStartDate = true;
-        }
-      }
+      if (aDate == null && bDate == null) return 0;
+      if (aDate == null) return 1;
+      if (bDate == null) return -1;
 
-      hasStartDate
-          ? booksWithStartDate.add(book)
-          : booksWithoutStartDate.add(book);
-    }
-
-    booksWithStartDate.sort((a, b) {
-      final bookALatestStartDate = getLatestStartDate(a);
-      final bookBLatestStartDate = getLatestStartDate(b);
-
-      int startDateSorting = (bookALatestStartDate!.millisecondsSinceEpoch)
-          .compareTo(bookBLatestStartDate!.millisecondsSinceEpoch);
-
-      if (!isAsc) {
-        startDateSorting *= -1;
-      } // descending
-      if (startDateSorting == 0) {
-        // secondary sorting, by release date
-        int releaseSorting = 0;
-        if ((a.publicationYear != null) && (b.publicationYear != null)) {
-          releaseSorting = a.publicationYear!.compareTo(b.publicationYear!);
-          if (!isAsc) {
-            releaseSorting *= -1;
-          }
-        }
-        if (releaseSorting == 0) {
-          // tertiary sorting, by title
-          int titleSorting = removeDiacritics(a.title.toString().toLowerCase())
-              .compareTo(removeDiacritics(b.title.toString().toLowerCase()));
-          if (!isAsc) {
-            titleSorting *= -1;
-          }
-          return titleSorting;
-        }
-        return releaseSorting;
-      }
-      return startDateSorting;
+      return isAsc ? aDate.compareTo(bDate) : bDate.compareTo(aDate);
     });
-
-    return booksWithStartDate + booksWithoutStartDate;
+    return list;
   }
 
   List<Book> _sortByFinishDate({
     required List<Book> list,
     required bool isAsc,
   }) {
-    List<Book> booksWithoutFinishDate = List.empty(growable: true);
-    List<Book> booksWithFinishDate = List.empty(growable: true);
+    list.sort((a, b) {
+      DateTime? aDate;
+      DateTime? bDate;
 
-    for (Book book in list) {
-      bool hasFinishDate = false;
+      if (a.readings.isNotEmpty) aDate = a.readings[0].finishDate;
+      if (b.readings.isNotEmpty) bDate = b.readings[0].finishDate;
 
-      for (final reading in book.readings) {
-        if (reading.finishDate != null) {
-          hasFinishDate = true;
-        }
-      }
+      if (aDate == null && bDate == null) return 0;
+      if (aDate == null) return 1;
+      if (bDate == null) return -1;
 
-      hasFinishDate
-          ? booksWithFinishDate.add(book)
-          : booksWithoutFinishDate.add(book);
-    }
-
-    booksWithFinishDate.sort((a, b) {
-      final bookALatestFinishDate = getLatestFinishDate(a);
-      final bookBLatestFinishDate = getLatestFinishDate(b);
-
-      int finishDateSorting = (bookALatestFinishDate!.millisecondsSinceEpoch)
-          .compareTo(bookBLatestFinishDate!.millisecondsSinceEpoch);
-
-      if (!isAsc) {
-        finishDateSorting *= -1;
-      } // descending
-      if (finishDateSorting == 0) {
-        // secondary sorting, by release date
-        int releaseSorting = 0;
-        if ((a.publicationYear != null) && (b.publicationYear != null)) {
-          releaseSorting = a.publicationYear!.compareTo(b.publicationYear!);
-          if (!isAsc) {
-            releaseSorting *= -1;
-          }
-        }
-        if (releaseSorting == 0) {
-          // tertiary sorting, by title
-          int titleSorting = removeDiacritics(a.title.toString().toLowerCase())
-              .compareTo(removeDiacritics(b.title.toString().toLowerCase()));
-          if (!isAsc) {
-            titleSorting *= -1;
-          }
-          return titleSorting;
-        }
-        return releaseSorting;
-      }
-      return finishDateSorting;
+      return isAsc ? aDate.compareTo(bDate) : bDate.compareTo(aDate);
     });
-
-    return booksWithFinishDate + booksWithoutFinishDate;
+    return list;
   }
 
   List<Book> _sortByPublicationYear({
@@ -663,8 +577,7 @@ class _BooksScreenState extends State<BooksScreen>
   }
 
   bool _displayIsGrid(DisplayState state) {
-    return state.type == DisplayType.grid ||
-        state.type == DisplayType.detailedGrid;
+    return state.type == DisplayType.grid;
   }
 
   @override
@@ -675,6 +588,11 @@ class _BooksScreenState extends State<BooksScreen>
     super.initState();
 
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
     _chipScrollController = ScrollController();
   }
 
@@ -698,11 +616,7 @@ class _BooksScreenState extends State<BooksScreen>
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: _buildTabs(context, bookListsOrder),
-              ),
+              child: _buildTabs(context, bookListsOrder)[_tabController.index],
             ),
           ],
         );
@@ -793,9 +707,6 @@ class _BooksScreenState extends State<BooksScreen>
                       : snapshot.data!,
                   listNumber: listNumber,
                   allBooksCount: snapshot.data!.length,
-                  gridType: displayState.type,
-                  gridSize: displayState.gridSize,
-                  titleOverCover: displayState.showTitleOverCover,
                 );
               } else {
                 return BooksList(

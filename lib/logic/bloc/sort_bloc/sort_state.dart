@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:openreads/core/constants/enums/book_format.dart';
-import 'package:openreads/core/constants/enums/sort_type.dart';
+import 'package:readmate/core/constants/enums/book_format.dart';
+import 'package:readmate/core/constants/enums/sort_type.dart';
 
 class SortState extends Equatable {
   const SortState({

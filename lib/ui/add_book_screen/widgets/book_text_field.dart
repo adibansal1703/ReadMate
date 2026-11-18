@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
-import 'package:openreads/core/themes/app_theme.dart';
+import 'package:readmate/core/themes/app_theme.dart';
 
 class BookTextField extends StatefulWidget {
   const BookTextField({
@@ -10,6 +10,7 @@ class BookTextField extends StatefulWidget {
     required this.controller,
     this.hint,
     this.icon,
+    this.iconWidget,
     required this.keyboardType,
     required this.maxLength,
     this.inputFormatters,
@@ -26,6 +27,7 @@ class BookTextField extends StatefulWidget {
   final TextEditingController controller;
   final String? hint;
   final IconData? icon;
+  final Widget? iconWidget;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final bool autofocus;
@@ -101,7 +103,6 @@ class _BookTextFieldState extends State<BookTextField> {
             padding: const EdgeInsets.symmetric(vertical: 5),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(cornerRadius),
-              // border: Border.all(color: dividerColor),
             ),
             child: child,
           );
@@ -139,12 +140,12 @@ class _BookTextFieldState extends State<BookTextField> {
       decoration: InputDecoration(
         labelText: widget.hint,
         labelStyle: const TextStyle(fontSize: 14),
-        icon: (widget.icon != null)
+        icon: widget.iconWidget ?? (widget.icon != null
             ? Icon(
                 widget.icon,
                 color: Theme.of(context).colorScheme.primary,
               )
-            : null,
+            : null),
         border: InputBorder.none,
         counterText: widget.hideCounter ? "" : null,
         suffixIcon: showClearButton

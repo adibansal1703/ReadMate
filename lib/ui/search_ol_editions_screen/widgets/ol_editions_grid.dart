@@ -1,12 +1,9 @@
-import 'dart:io';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:openreads/model/ol_edition_result.dart';
-import 'package:openreads/resources/open_library_service.dart';
-import 'package:openreads/ui/search_ol_editions_screen/widgets/widgets.dart';
+import 'package:readmate/model/ol_edition_result.dart';
+import 'package:readmate/resources/open_library_service.dart';
+import 'package:readmate/ui/search_ol_editions_screen/widgets/widgets.dart';
 
 class OLEditionsGrid extends StatelessWidget {
   OLEditionsGrid({
@@ -39,9 +36,6 @@ class OLEditionsGrid extends StatelessWidget {
         offset: (pageKey - 1) * sizeOfPage,
       );
 
-      // If first page is empty the package will abort further requests.
-      // This is a workaround to fetch the next page if the first page is empty
-      // without appending the first page to the list of results.
       while (newResults.isEmpty && pageKey < editions.length) {
         pageKey += sizeOfPage;
         newResults = await _fetchResults(offset: pageKey);
@@ -49,7 +43,6 @@ class OLEditionsGrid extends StatelessWidget {
 
       return newResults;
     } catch (error) {
-      // TODO: Handle error and show message to user
       return [];
     }
   }
@@ -96,28 +89,18 @@ class OLEditionsGrid extends StatelessWidget {
             builderDelegate: PagedChildBuilderDelegate<OLEditionResult>(
               invisibleItemsThreshold: 12,
               firstPageProgressIndicatorBuilder: (_) => Center(
-                child: Platform.isIOS
-                    ? CupertinoActivityIndicator(
-                        radius: 20,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : LoadingAnimationWidget.staggeredDotsWave(
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 50,
-                      ),
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 50,
+                ),
               ),
               newPageProgressIndicatorBuilder: (_) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
-                  child: Platform.isIOS
-                      ? CupertinoActivityIndicator(
-                          radius: 20,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-                      : LoadingAnimationWidget.staggeredDotsWave(
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 50,
-                        ),
+                  child: LoadingAnimationWidget.staggeredDotsWave(
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 50,
+                  ),
                 ),
               ),
               itemBuilder: (context, item, index) => BookCardOLEdition(

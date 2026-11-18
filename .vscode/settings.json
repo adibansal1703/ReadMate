@@ -1,7 +1,0 @@
-// projectwithsomedartnotstructured/.vscode/settings
-{
-    "problems.decorations.enabled": true,
-    "dart.analysisExcludedFolders": [
-        "submodules"
-    ]
-}

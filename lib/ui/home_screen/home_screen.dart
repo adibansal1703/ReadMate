@@ -1,27 +1,23 @@
-import 'dart:io';
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
-import 'package:openreads/core/constants/constants.dart';
-import 'package:openreads/core/constants/enums/book_status.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/bloc/theme_bloc/theme_bloc.dart';
-import 'package:openreads/logic/cubit/default_book_status_cubit.dart';
-import 'package:openreads/logic/cubit/edit_book_cubit.dart';
-import 'package:openreads/logic/cubit/selected_books_cubit.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/ui/add_book_screen/add_book_screen.dart';
-import 'package:openreads/ui/books_screen/books_screen.dart';
-import 'package:openreads/ui/display_screen/display_screen.dart';
-import 'package:openreads/ui/search_ol_screen/search_ol_screen.dart';
-import 'package:openreads/ui/search_page/search_page.dart';
-import 'package:openreads/ui/settings_screen/settings_screen.dart';
-import 'package:openreads/ui/statistics_screen/statistics_screen.dart';
+import 'package:readmate/core/constants/constants.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/core/themes/app_theme.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/bloc/theme_bloc/theme_bloc.dart';
+import 'package:readmate/logic/cubit/auth_cubit.dart';
+import 'package:readmate/logic/cubit/edit_book_cubit.dart';
+import 'package:readmate/logic/cubit/selected_books_cubit.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/ui/add_book_screen/add_book_screen.dart';
+import 'package:readmate/ui/books_screen/books_screen.dart';
+import 'package:readmate/ui/search_ol_screen/search_ol_screen.dart';
+import 'package:readmate/ui/settings_screen/settings_screen.dart';
+import 'package:readmate/ui/statistics_screen/statistics_screen.dart';
+
+import 'package:readmate/logic/cubit/book_cubit.dart';
 
 import 'widgets/widgets.dart';
 
@@ -41,34 +37,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void openSortFilterSheet() {
     FocusManager.instance.primaryFocus?.unfocus();
 
-    if (Platform.isIOS) {
-      showCupertinoModalBottomSheet(
-        context: context,
-        expand: false,
-        builder: (_) {
-          return const SortBottomSheet();
-        },
-      );
-    } else if (Platform.isAndroid) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) {
-          return const SortBottomSheet();
-        },
-      );
-    }
-  }
-
-  void goToDisplayScreen() {
-    FocusManager.instance.primaryFocus?.unfocus();
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const DisplayScreen(),
-      ),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return const SortBottomSheet();
+      },
     );
   }
 
@@ -83,32 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  //TODO: fix this logic
-  BookStatus _getStatusForNewBook() {
-    // if (_tabController.index == inProgressIndex) {
-    //   return BookStatus.inProgress;
-    // } else if (_tabController.index == 2) {
-    //   return BookStatus.forLater;
-    // } else {
-    return BookStatus.read;
-    // }
-  }
-
-  void _setEmptyBookForEditScreen() {
-    final status = _getStatusForNewBook();
-    final defaultBookFormat = context.read<DefaultBooksFormatCubit>().state;
-
-    context.read<EditBookCubit>().setBook(
-          Book.empty(status: status, bookFormat: defaultBookFormat),
-        );
-  }
-
-  void _goToSearchInUserBooksPage() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SearchPage()),
-    );
-  }
-
   Future<void> _invokeMenuOption(String choice) async {
     await Future.delayed(const Duration(milliseconds: 0));
 
@@ -118,47 +67,41 @@ class _HomeScreenState extends State<HomeScreen> {
       if (choice == menuOptions[0]) {
         openSortFilterSheet();
       } else if (choice == menuOptions[1]) {
-        goToDisplayScreen();
-      } else if (choice == menuOptions[2]) {
         goToSettingsScreen();
       }
-    } else if (currentPageIndex == 1) {
-      if (choice == menuOptions[0]) {
+    } else {
+      if (choice == LocaleKeys.settings.tr()) {
         goToSettingsScreen();
       }
     }
   }
 
+  BookStatus _getStatusForNewBook() {
+    return BookStatus.inProgress;
+  }
+
+  void _setEmptyBookForEditScreen() {
+    final status = _getStatusForNewBook();
+    final book = Book.empty(status: status);
+    context.read<EditBookCubit>().setBook(book);
+  }
+
   void _onFabPressed() {
-    if (Platform.isIOS) {
-      showCupertinoModalBottomSheet(
-        context: context,
-        expand: false,
-        builder: (_) {
-          return AddBookSheet(
-            addManually: _addBookManually,
-            searchInOpenLibrary: _searchInOpenLibrary,
-            scanBarcode: _scanBarcode,
-          );
-        },
-      );
-    } else if (Platform.isAndroid) {
-      showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        builder: (_) {
-          return AddBookSheet(
-            addManually: _addBookManually,
-            searchInOpenLibrary: _searchInOpenLibrary,
-            scanBarcode: _scanBarcode,
-          );
-        },
-      );
-    }
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return AddBookSheet(
+          addManually: _addBookManually,
+          searchInOpenLibrary: _searchInOpenLibrary,
+        );
+      },
+    );
   }
 
   Future<void> _addBookManually() async {
     _setEmptyBookForEditScreen();
+    context.read<EditBookCoverCubit>().setCover(null);
 
     Navigator.pop(context);
     await Future.delayed(const Duration(milliseconds: 100));
@@ -173,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _searchInOpenLibrary() async {
     _setEmptyBookForEditScreen();
+    context.read<EditBookCoverCubit>().setCover(null);
 
     Navigator.pop(context);
     await Future.delayed(const Duration(milliseconds: 100));
@@ -182,24 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => SearchOLScreen(
-          status: _getStatusForNewBook(),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _scanBarcode() async {
-    _setEmptyBookForEditScreen();
-
-    Navigator.pop(context);
-    await Future.delayed(const Duration(milliseconds: 100));
-    if (!mounted) return;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SearchOLScreen(
-          scan: true,
           status: _getStatusForNewBook(),
         ),
       ),
@@ -211,7 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (currentPageIndex == 0) {
       menuOptions.add(LocaleKeys.sort_filter.tr());
-      menuOptions.add(LocaleKeys.display.tr());
     }
     menuOptions.add(LocaleKeys.settings.tr());
   }
@@ -222,6 +147,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     super.initState();
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -277,11 +204,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildScaffoldBody() {
-    return currentPageIndex == 0
-        ? const BooksScreen()
-        : currentPageIndex == 1
-            ? const StatisticsScreen()
-            : const SizedBox.shrink();
+    switch (currentPageIndex) {
+      case 0:
+        return const BooksScreen();
+      case 1:
+        return const StatisticsScreen();
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   AppBar _buildMultiSelectAppBar(
@@ -321,24 +251,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
-    AppBar appBar = AppBar(
+    final authState = context.read<AuthCubit>().state;
+    String? username;
+    if (authState is Authenticated) {
+      username = authState.user.username;
+    }
+
+    return AppBar(
       elevation: 0,
       scrolledUnderElevation: 0,
-      title: const Row(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          if (username != null)
+            Text(
+              '@$username',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.normal,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
+            ),
+          const Text(
             Constants.appName,
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ],
       ),
       actions: [
-        currentPageIndex == 0
-            ? IconButton(
-                onPressed: _goToSearchInUserBooksPage,
-                icon: const Icon(Icons.search),
-              )
-            : const SizedBox(),
         PopupMenuButton<String>(
           onSelected: (_) {},
           itemBuilder: (_) {
@@ -355,17 +295,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ],
     );
-
-    return Platform.isAndroid
-        ? appBar
-        : PreferredSize(
-            preferredSize: Size(double.infinity, appBarHeight),
-            child: ClipRRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                child: appBar,
-              ),
-            ),
-          );
   }
 }

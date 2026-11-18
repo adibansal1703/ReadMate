@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/core/themes/app_theme.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/core/themes/app_theme.dart';
 
 class AnimatedStatusButton extends StatelessWidget {
   const AnimatedStatusButton({

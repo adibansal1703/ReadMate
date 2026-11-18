@@ -13,7 +13,7 @@ class SettingsDialogButton extends StatelessWidget {
   final String? fontFamily;
 
   static const example =
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
+      'Reading is a conversation. All books talk. But a good book listens as well.';
 
   @override
   Widget build(BuildContext context) {

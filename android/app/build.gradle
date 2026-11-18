@@ -1,7 +1,9 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
+    id "org.jetbrains.kotlin.plugin.serialization"
     id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
 }
 
 def localProperties = new Properties()
@@ -75,13 +77,22 @@ flutter {
     source '../..'
 }
 
-dependencies {}
+dependencies {
+    implementation "io.ktor:ktor-client-android:3.0.0"
+    implementation "io.ktor:ktor-client-content-negotiation:3.0.0"
+    implementation "io.ktor:ktor-serialization-kotlinx-json:3.0.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.6"
+}
 
-// run with ./gradlew printSdkVersions
+
 task printSdkVersions {
     doLast {
         println "The current compileSdkVersion is: ${android.compileSdkVersion}"
         println "The current targetSdkVersion is: ${android.defaultConfig.targetSdkVersion}"
         println "The current minSdkVersion is: ${android.defaultConfig.minSdkVersion}"
     }
-} 
+}
+
+

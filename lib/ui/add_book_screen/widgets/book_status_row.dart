@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/cubit/edit_book_cubit.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/ui/add_book_screen/widgets/widgets.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/cubit/edit_book_cubit.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/ui/add_book_screen/widgets/widgets.dart';
 
 class BookStatusRow extends StatelessWidget {
   const BookStatusRow({

@@ -13,11 +13,23 @@ class ThemeBloc extends HydratedBloc<ThemeEvent, ThemeState> {
   ThemeBloc()
       : super(SetThemeState(
           themeMode: ThemeMode.system,
-          primaryColor: const Color(0xff3FA796),
+          primaryColor: const Color(0xff00BFA6),
           fontFamily: 'Nunito',
-          useMaterialYou: Platform.isAndroid ? true : false,
+          useMaterialYou: false,
           amoledDark: false,
         )) {
+    if (state is SetThemeState) {
+      final currentState = state as SetThemeState;
+      if (currentState.primaryColor == const Color(0xff3FA796) || currentState.useMaterialYou == true) {
+        add(ChangeThemeEvent(
+          themeMode: currentState.themeMode,
+          primaryColor: const Color(0xff00BFA6),
+          fontFamily: currentState.fontFamily,
+          useMaterialYou: false,
+          amoledDark: currentState.amoledDark,
+        ));
+      }
+    }
     on<ChangeThemeEvent>((event, emit) {
       fontFamily = event.fontFamily;
 
@@ -58,25 +70,25 @@ class ThemeBloc extends HydratedBloc<ThemeEvent, ThemeState> {
       case 1:
         return SetThemeState(
           themeMode: ThemeMode.light,
-          primaryColor: Color(primaryColor ?? 0xff2146C7),
+          primaryColor: Color(primaryColor ?? 0xff00BFA6),
           fontFamily: fontFamily ?? 'Nunito',
-          useMaterialYou: useMaterialYou ?? true,
+          useMaterialYou: useMaterialYou ?? false,
           amoledDark: amoledDark ?? false,
         );
       case 2:
         return SetThemeState(
           themeMode: ThemeMode.dark,
-          primaryColor: Color(primaryColor ?? 0xff2146C7),
+          primaryColor: Color(primaryColor ?? 0xff00BFA6),
           fontFamily: fontFamily ?? 'Nunito',
-          useMaterialYou: useMaterialYou ?? true,
+          useMaterialYou: useMaterialYou ?? false,
           amoledDark: amoledDark ?? false,
         );
       default:
         return SetThemeState(
           themeMode: ThemeMode.system,
-          primaryColor: Color(primaryColor ?? 0xff2146C7),
+          primaryColor: Color(primaryColor ?? 0xff00BFA6),
           fontFamily: fontFamily ?? 'Nunito',
-          useMaterialYou: useMaterialYou ?? true,
+          useMaterialYou: useMaterialYou ?? false,
           amoledDark: amoledDark ?? false,
         );
     }

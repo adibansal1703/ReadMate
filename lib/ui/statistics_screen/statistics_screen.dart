@@ -1,16 +1,12 @@
-import 'dart:io';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:openreads/logic/bloc/challenge_bloc/challenge_bloc.dart';
-import 'package:openreads/logic/bloc/stats_bloc/stats_bloc.dart';
-import 'package:openreads/logic/bloc/theme_bloc/theme_bloc.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/model/book.dart';
+import 'package:readmate/logic/bloc/stats_bloc/stats_bloc.dart';
+import 'package:readmate/logic/bloc/theme_bloc/theme_bloc.dart';
+import 'package:readmate/main.dart';
+import 'package:readmate/model/book.dart';
 
-import 'package:openreads/ui/statistics_screen/widgets/statistics.dart';
+import 'package:readmate/ui/statistics_screen/widgets/statistics.dart';
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -21,16 +17,6 @@ class StatisticsScreen extends StatefulWidget {
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
   late FocusNode _focusNode;
-
-  void _setChallenge(int books, int pages, int year) {
-    BlocProvider.of<ChallengeBloc>(context).add(
-      ChangeChallengeEvent(
-        books: (books == 0) ? null : books,
-        pages: (pages == 0) ? null : pages,
-        year: year,
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -60,7 +46,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             if (state is StatsLoaded) {
                               return Statistics(
                                 state: state,
-                                setChallenge: _setChallenge,
                               );
                             } else if (state is StatsError) {
                               return Center(
@@ -78,17 +63,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               );
                             } else {
                               return Center(
-                                child: Platform.isIOS
-                                    ? CupertinoActivityIndicator(
-                                        radius: 20,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                      )
-                                    : LoadingAnimationWidget.fourRotatingDots(
-                                        color: Theme.of(context).primaryColor,
-                                        size: 42,
-                                      ),
+                                child: LoadingAnimationWidget.fourRotatingDots(
+                                  color: Theme.of(context).primaryColor,
+                                  size: 42,
+                                ),
                               );
                             }
                           },

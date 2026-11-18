@@ -3,21 +3,20 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/main.dart';
-import 'package:openreads/model/reading.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/model/reading_time.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/main.dart';
+import 'package:readmate/model/reading.dart';
+import 'package:readmate/model/book.dart';
 
 class EditBookCubit extends Cubit<Book> {
   EditBookCubit() : super(Book.empty());
 
   setBook(Book book) => emit(book);
 
-  void updateBook(Uint8List? cover, BuildContext context) {
+  Future<void> updateBook(Uint8List? cover, BuildContext context) async {
     if (state.id == null) return;
 
-    bookCubit.updateBook(state, cover: cover, context: context);
+    await bookCubit.updateBook(state, cover: cover, context: context);
   }
 
   Future<int> addNewBook(Uint8List? cover) async {
@@ -27,9 +26,31 @@ class EditBookCubit extends Cubit<Book> {
   }
 
   void setStatus(BookStatus status) {
-    final book = state.copyWith();
+    final dateNow = DateTime.now();
+    final date = DateTime(dateNow.year, dateNow.month, dateNow.day);
+    List<Reading> readings = List<Reading>.from(state.readings);
 
-    emit(book.copyWith(status: status));
+    if (status == BookStatus.inProgress) {
+      if (readings.isEmpty) {
+        readings = [Reading(startDate: date)];
+      } else {
+        final last = readings.last;
+        if (last.startDate == null) {
+          readings[readings.length - 1] = last.copyWith(startDate: date);
+        }
+      }
+    } else if (status == BookStatus.read) {
+      if (readings.isEmpty) {
+        readings = [Reading(finishDate: date)];
+      } else {
+        final last = readings.last;
+        if (last.finishDate == null) {
+          readings[readings.length - 1] = last.copyWith(finishDate: date);
+        }
+      }
+    }
+
+    emit(state.copyWith(status: status, readings: readings));
   }
 
   void setRating(double rating) {
@@ -55,9 +76,12 @@ class EditBookCubit extends Cubit<Book> {
   }
 
   void setPages(String pages) {
-    final book = state.copyWith();
-    book.pages = pages.isEmpty ? null : int.parse(pages);
-    emit(book);
+    emit(state.copyWith(pages: pages.isEmpty ? null : int.parse(pages)));
+  }
+
+  void setCurrentPage(String currentPage) {
+    emit(state.copyWith(
+        currentPage: currentPage.isEmpty ? 0 : int.parse(currentPage)));
   }
 
   void setDescription(String description) {
@@ -86,12 +110,7 @@ class EditBookCubit extends Cubit<Book> {
     emit(book);
   }
 
-  void setMyReview(String myReview) {
-    final book = state.copyWith();
-    book.myReview = myReview.isNotEmpty ? myReview : null;
 
-    emit(book);
-  }
 
   void setNotes(String notes) {
     final book = state.copyWith();
@@ -115,13 +134,11 @@ class EditBookCubit extends Cubit<Book> {
   }
 
   void addNewTag(String tag) {
-    // Remove space at the end of the string if exists
     if (tag.substring(tag.length - 1) == ' ') {
       tag = tag.substring(0, tag.length - 1);
     }
 
-    // Remove illegal characters
-    tag = tag.replaceAll('|', ''); //TODO: add same for @ in all needed places
+    tag = tag.replaceAll('|', '');
 
     List<String> tags = state.tags == null ? [] : state.tags!.split('|||||');
 
@@ -183,17 +200,6 @@ class EditBookCubit extends Cubit<Book> {
     List<Reading> readings = state.readings;
 
     readings[index].finishDate = finishDate;
-
-    final book = state.copyWith();
-    book.readings = readings;
-
-    emit(book);
-  }
-
-  setCustomReadingTime(ReadingTime? readingTime, int index) {
-    List<Reading> readings = state.readings;
-
-    readings[index].customReadingTime = readingTime;
 
     final book = state.copyWith();
     book.readings = readings;

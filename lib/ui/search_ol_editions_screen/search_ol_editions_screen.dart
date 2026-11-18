@@ -2,16 +2,14 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/generated/locale_keys.g.dart';
-import 'package:openreads/logic/cubit/default_book_status_cubit.dart';
-import 'package:openreads/logic/cubit/default_book_tags_cubit.dart';
-import 'package:openreads/logic/cubit/edit_book_cubit.dart';
-import 'package:openreads/model/reading.dart';
-import 'package:openreads/model/book.dart';
-import 'package:openreads/model/ol_edition_result.dart';
-import 'package:openreads/ui/add_book_screen/add_book_screen.dart';
-import 'package:openreads/ui/search_ol_editions_screen/widgets/widgets.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/generated/locale_keys.g.dart';
+import 'package:readmate/logic/cubit/edit_book_cubit.dart';
+import 'package:readmate/model/reading.dart';
+import 'package:readmate/model/book.dart';
+import 'package:readmate/model/ol_edition_result.dart';
+import 'package:readmate/ui/add_book_screen/add_book_screen.dart';
+import 'package:readmate/ui/search_ol_editions_screen/widgets/widgets.dart';
 
 class SearchOLEditionsScreen extends StatefulWidget {
   const SearchOLEditionsScreen({
@@ -50,8 +48,8 @@ class _SearchOLEditionsScreenState extends State<SearchOLEditionsScreen> {
     required int? cover,
     String? work,
   }) {
-    final defaultBookFormat = context.read<DefaultBooksFormatCubit>().state;
-    final defaultTags = context.read<DefaultBookTagsCubit>().state;
+    const defaultBookFormat = BookFormat.paperback;
+    const String? defaultTags = null;
 
     final addDate = DateTime.now();
 
@@ -71,7 +69,7 @@ class _SearchOLEditionsScreenState extends State<SearchOLEditionsScreen> {
       publicationYear: widget.firstPublishYear,
       bookFormat: result.physicalFormat ?? defaultBookFormat,
       readings: List<Reading>.empty(growable: true),
-      tags: defaultTags.isNotEmpty == true ? defaultTags.join('|||||') : null,
+      tags: defaultTags,
       dateAdded: addDate,
       dateModified: addDate,
     );
@@ -80,12 +78,7 @@ class _SearchOLEditionsScreenState extends State<SearchOLEditionsScreen> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => AddBookScreen(
-          fromOpenLibrary: true,
-          fromOpenLibraryEdition: true,
-          work: work,
-          coverOpenLibraryID: cover,
-        ),
+        builder: (_) => const AddBookScreen(),
       ),
     );
   }
@@ -129,7 +122,6 @@ class _SearchOLEditionsScreenState extends State<SearchOLEditionsScreen> {
                     ],
                   ),
                 ),
-                // UniqueKey() is used to force the widget to rebuild
                 OLEditionsGrid(
                   key: UniqueKey(),
                   editions: widget.editions,

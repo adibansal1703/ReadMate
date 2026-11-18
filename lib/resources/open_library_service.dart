@@ -1,10 +1,12 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/model/ol_author_result.dart';
-import 'package:openreads/model/ol_edition_result.dart';
-import 'package:openreads/model/ol_search_result.dart';
-import 'package:openreads/model/ol_work_result.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/model/ol_author_result.dart';
+import 'package:readmate/model/ol_edition_result.dart';
+import 'package:readmate/model/ol_search_result.dart';
+import 'package:readmate/model/ol_work_result.dart';
 
 class OpenLibraryService {
   static const baseUrl = 'https://openlibrary.org';
@@ -16,6 +18,10 @@ class OpenLibraryService {
     required int limit,
     required OLSearchType searchType,
   }) async {
+    final queryParam = searchType == OLSearchType.isbn 
+        ? query.replaceAll('-', '').trim() 
+        : query;
+
     final searchTypeParam = searchType == OLSearchType.general
         ? 'q'
         : searchType == OLSearchType.author
@@ -32,7 +38,7 @@ class OpenLibraryService {
     final limitParam = '&limit=$limit';
 
     final uri = Uri.parse(
-      '$baseUrl/search.json?$searchTypeParam=$query$limitParam$offsetParam$modeParam$fieldsParam',
+      '$baseUrl/search.json?$searchTypeParam=$queryParam$limitParam$offsetParam$modeParam$fieldsParam',
     );
 
     final response = await get(uri);
@@ -54,11 +60,9 @@ class OpenLibraryService {
   Future<Uint8List?> getCover(String isbn) async {
     try {
       final response = await get(
-        Uri.parse('$coversBaseUrl/b/isbn/$isbn-L.jpg'),
+        Uri.parse('$coversBaseUrl/b/isbn/$isbn-M.jpg'),
       );
 
-      // If the response is less than 500 bytes,
-      // probably the cover is not available
       if (response.bodyBytes.length < 500) return null;
 
       return response.bodyBytes;
@@ -97,5 +101,34 @@ class OpenLibraryService {
     } else {
       return null;
     }
+  }
+
+  Future<List<OLSearchResultDoc>> getTrending() async {
+    try {
+      final uri = Uri.parse('$baseUrl/trending/daily.json?limit=10');
+      final response = await get(uri);
+      if (response.statusCode == 200) {
+        final data = openLibrarySearchResultFromJson(response.body);
+        return data.docs;
+      }
+    } catch (e) {
+      debugPrint("Trending fetch error: $e");
+    }
+    return [];
+  }
+
+  Future<List<String>> getWorkEditions(String workKey) async {
+    try {
+      final uri = Uri.parse('$baseUrl$workKey/editions.json?limit=100');
+      final response = await get(uri);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final entries = data['entries'] as List;
+        return entries.map((e) => e['key'].toString().replaceAll('/books/', '')).toList();
+      }
+    } catch (e) {
+      debugPrint("Work editions fetch error: $e");
+    }
+    return [];
   }
 }

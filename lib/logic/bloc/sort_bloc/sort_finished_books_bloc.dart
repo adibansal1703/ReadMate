@@ -1,7 +1,7 @@
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:openreads/core/constants/enums/sort_type.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_event.dart';
-import 'package:openreads/logic/bloc/sort_bloc/sort_state.dart';
+import 'package:readmate/core/constants/enums/sort_type.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_event.dart';
+import 'package:readmate/logic/bloc/sort_bloc/sort_state.dart';
 
 class SortFinishedBooksBloc extends HydratedBloc<SortEvent, SortState> {
   SortFinishedBooksBloc()

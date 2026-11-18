@@ -1,8 +1,7 @@
 import 'package:diacritic/diacritic.dart';
 import 'package:flutter/material.dart';
-import 'package:openreads/core/constants/enums/enums.dart';
-import 'package:openreads/core/themes/app_theme.dart';
-import 'package:openreads/ui/similiar_books_screen/similiar_books_screen.dart';
+import 'package:readmate/core/constants/enums/enums.dart';
+import 'package:readmate/core/themes/app_theme.dart';
 
 class BookTitleDetail extends StatelessWidget {
   const BookTitleDetail({
@@ -37,16 +36,7 @@ class BookTitleDetail extends StatelessWidget {
         style: const TextStyle(fontSize: 12),
       ),
       clipBehavior: Clip.none,
-      onSelected: (_) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SimiliarBooksScreen(
-              tag: tag,
-            ),
-          ),
-        );
-      },
+      onSelected: (_) {},
     );
   }
 
@@ -73,17 +63,6 @@ class BookTitleDetail extends StatelessWidget {
     }
 
     return chips;
-  }
-
-  void _navigateToSimiliarAuthorBooksScreen(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SimiliarBooksScreen(
-          author: author,
-        ),
-      ),
-    );
   }
 
   @override
@@ -117,7 +96,7 @@ class BookTitleDetail extends StatelessWidget {
           const SizedBox(height: 5),
           InkWell(
             borderRadius: BorderRadius.circular(cornerRadius),
-            onTap: () => _navigateToSimiliarAuthorBooksScreen(context),
+            onTap: () {},
             child: Text(
               author,
               style: TextStyle(
